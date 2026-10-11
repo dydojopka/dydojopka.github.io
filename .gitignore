@@ -5,3 +5,9 @@ dist/
 *.local
 __pycache__/
 .venv/
+AGENTS.md
+README.md
+tests/
+asset-sources/
+scripts/
+PLAN.md
