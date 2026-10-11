@@ -101,13 +101,3 @@ export function landscapeTexture() {
   });
 }
 
-export function paperTexture() {
-  return canvasTexture(128, 128, (ctx, w, h) => {
-    ctx.fillStyle = '#bcbca4';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#858b77';
-    for (let y = 22; y < 106; y += 7) ctx.fillRect(18, y, y % 3 === 0 ? 55 : 87, 1);
-    ctx.fillStyle = '#6b7666';
-    ctx.fillRect(18, 12, 35, 3);
-  });
-}
