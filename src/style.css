@@ -1,0 +1,8 @@
+:root { color-scheme: dark; background: #101815; }
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { font-family: ui-monospace, monospace; }
+#room { width: 100%; height: 100%; height: 100dvh; overflow: hidden; }
+canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+#fallback, noscript { position: fixed; inset: 40% 10% auto; max-width: 42rem; margin: auto; color: #b6c4b9; line-height: 1.6; text-align: center; }
+[hidden] { display: none !important; }
