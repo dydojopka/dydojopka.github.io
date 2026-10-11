@@ -5,8 +5,8 @@ export function cameraFrame(aspect) {
   return { left: -height * aspect / 2, right: height * aspect / 2, top: height / 2, bottom: -height / 2 };
 }
 
-export function renderSize(width, height, pixelated = true) {
-  const scale = Math.min(1, (pixelated ? 640 : 1200) / Math.max(height, 1), 1600 / Math.max(width, 1));
+export function renderSize(width, height) {
+  const scale = Math.min(1, 640 / Math.max(height, 1), 1600 / Math.max(width, 1));
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 

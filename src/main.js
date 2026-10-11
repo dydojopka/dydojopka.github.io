@@ -13,10 +13,7 @@ start().catch((error) => {
 });
 
 async function start() {
-  // The shipped style is subtly pixelated. This development-only option lets us
-  // compare the same composition without adding controls to the experience.
-  const pixelated = !(import.meta.env.DEV && new URLSearchParams(location.search).has('smooth'));
-  const renderer = new THREE.WebGLRenderer({ antialias: !pixelated, powerPreference: 'low-power' });
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power' });
   renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -26,7 +23,6 @@ async function start() {
   renderer.shadowMap.autoUpdate = false;
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', host.getAttribute('aria-label'));
-  if (!pixelated) renderer.domElement.style.imageRendering = 'auto';
   host.append(renderer.domElement);
 
   const { scene, snow } = await createRoom();
@@ -88,7 +84,7 @@ async function start() {
     Object.assign(camera, cameraFrame(width / height));
     postMaterial.uniforms.frameHeight.value = camera.top - camera.bottom;
     camera.updateProjectionMatrix();
-    const size = renderSize(width, height, pixelated);
+    const size = renderSize(width, height);
     renderer.setSize(size.width, size.height, false);
     target.setSize(size.width, size.height);
     postMaterial.uniforms.resolution.value.set(size.width, size.height);

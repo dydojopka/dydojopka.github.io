@@ -1,8 +1,5 @@
 export const DESKTOP_Y = 2.252;
 
-// One switch controls the retrofitted CardReader, its cable and contact shadow.
-export const SHOW_PRINTER = true;
-
 // Position is the bottom-center of each exported group. Keeping placement
 // separate lets geometry checks use the same transforms as the actual scene.
 export const placements = {

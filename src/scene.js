@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { surfaceTexture, landscapeTexture } from './textures.js';
 import { createSnow } from './snow.js';
 import { prepareScreen } from './screen.js';
-import { DESKTOP_Y as desktop, placements, SHOW_PRINTER } from './placements.js';
+import { DESKTOP_Y as desktop, placements } from './placements.js';
 import { buildPrinter } from './printer.js';
 import { addContactShadows } from './contact-shadows.js';
 
@@ -57,7 +57,6 @@ export async function createRoom() {
   const dark = material(0x111b16);
   const paper = material(0xbec4ac, { map: null });
   const printer = buildPrinter(staticRoot.getObjectByName('card-reader'), { paper });
-  printer.visible = SHOW_PRINTER;
   addContactShadows(staticRoot, ['monitor', 'keyboard', 'radio-stack', 'plant', 'desk-lamp', 'printer', 'book'], desktop + 0.001);
   const cube = new THREE.BoxGeometry(1, 1, 1);
   function box(size, position, mat, parent = staticRoot) {
@@ -90,7 +89,7 @@ export async function createRoom() {
   const bulb = box([0.2, 0.015, 0.22], [1.23, desktop + 0.88, 0.26], new THREE.MeshBasicMaterial({ color: 0xc79d60 }));
   bulb.castShadow = false;
   cable([[-0.15, desktop + 0.14, -1.2], [0.4, desktop + 0.01, -1.42], [0.68, 1.7, -1.49], [0.7, 0.12, -1.49], [2.9, 0.08, -2.1]]);
-  if (SHOW_PRINTER) cable([[2.92, desktop + 0.09, -0.7], [3.35, desktop, -1.28], [3.55, 1.8, -1.5], [3.55, 0.1, -1.75], [4.2, 0.1, -2.6]]);
+  cable([[2.92, desktop + 0.09, -0.7], [3.35, desktop, -1.28], [3.55, 1.8, -1.5], [3.55, 0.1, -1.75], [4.2, 0.1, -2.6]]);
   scene.add(new THREE.HemisphereLight(0x9aadb9, 0x25342a, 0.52));
   const cold = new THREE.DirectionalLight(0xa7bdcf, 1.35);
   cold.position.set(-3, 6, -1.8);
