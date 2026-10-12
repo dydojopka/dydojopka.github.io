@@ -2,7 +2,18 @@
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body { font-family: ui-monospace, monospace; }
-#room { width: 100%; height: 100%; height: 100dvh; overflow: hidden; }
+#room { position: relative; width: 100%; height: 100%; height: 100dvh; overflow: hidden; touch-action: none; outline: none; }
+#room:focus-visible { box-shadow: inset 0 0 0 1px #687d70; }
 canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.cursor-active, .cursor-active * { cursor: none; }
+.pixel-cursor { position: fixed; inset: 0 auto auto 0; width: 128px; height: 128px; pointer-events: none; z-index: 20; }
+.view-controls { position: absolute; inset: auto 24px 20px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; pointer-events: none; transform: translateZ(0); }
+#view-help { margin: 0; margin-right: auto; color: #9aaba1; font-size: 11px; line-height: 1.5; text-shadow: 0 1px 3px #080e12; }
+#reset-view { flex: 0 0 auto; padding: 8px 10px; border: 1px solid #46574d; background: #101815d9; color: #b6c4b9; font: inherit; font-size: 11px; pointer-events: auto; }
+#reset-view:hover, #reset-view:focus-visible { border-color: #ac9c73; color: #ddd0a8; outline: none; }
+@media (max-width: 600px) {
+  .view-controls { inset: auto 14px max(14px, env(safe-area-inset-bottom)); gap: 8px; flex-wrap: wrap; }
+  #view-help { max-width: 22ch; }
+}
 #fallback, noscript { position: fixed; inset: 40% 10% auto; max-width: 42rem; margin: auto; color: #b6c4b9; line-height: 1.6; text-align: center; }
 [hidden] { display: none !important; }

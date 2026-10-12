@@ -4,12 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101815" />
-    <meta name="description" content="Ночное рабочее место. Приглушённый свет терминала и сильная метель за окном." />
-    <title>Зимний терминал</title>
+    <meta name="description" content="Евгений Ашроев — студент ИМИТ ИГУ. Python, терминальные приложения, веб-интерфейсы и проекты в интерактивной 3D-визитке." />
+    <title>Евгений Ашроев — личный терминал</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23101815'/%3E%3Crect x='10' y='12' width='44' height='34' rx='3' fill='%236b8873'/%3E%3Crect x='15' y='17' width='34' height='23' rx='3' fill='%23283f32'/%3E%3Cpath d='M23 52h18' stroke='%236b8873' stroke-width='5'/%3E%3C/svg%3E" />
   </head>
   <body>
-    <main id="room" aria-label="Трёхмерная сцена: рабочий стол с ЭЛТ-монитором, клавиатурой, принтером, растением и лампой в ночной комнате. За окном сильная метель."></main>
+    <main id="room" tabindex="0" aria-describedby="view-help" aria-label="Трёхмерная сцена: рабочий стол с ЭЛТ-монитором, клавиатурой, принтером, растением и лампой в ночной комнате. За окном сильная метель.">
+      <div class="view-controls" hidden>
+        <p id="view-help"></p>
+        <button id="reset-view" type="button" title="Вернуться к монитору (Home)">К монитору</button>
+      </div>
+      <div class="monitor-controls" hidden>
+        <p>Прокрутка — колесо / свайп · Назад — Esc</p>
+        <button id="leave-monitor" type="button">← К столу</button>
+      </div>
+    </main>
     <p id="fallback" role="status" hidden>Не удалось открыть 3D-сцену. Попробуйте браузер с поддержкой WebGL 2 и включённым аппаратным ускорением.</p>
     <noscript>Для этой 3D-сцены необходимо включить JavaScript.</noscript>
     <script type="module" src="/src/main.js"></script>

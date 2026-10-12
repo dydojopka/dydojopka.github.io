@@ -37,67 +37,38 @@ export function surfaceTexture() {
   return texture;
 }
 
-export function screenTexture() {
-  return canvasTexture(256, 192, (ctx, w, h) => {
-    const glow = ctx.createRadialGradient(126, 85, 15, 128, 96, 170);
-    glow.addColorStop(0, '#46684e');
-    glow.addColorStop(0.6, '#2e4936');
-    glow.addColorStop(1, '#15291e');
-    ctx.fillStyle = glow;
+export function landscapeTexture() {
+  return canvasTexture(64, 256, (ctx, w, h) => {
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#192630');
+    sky.addColorStop(0.43, '#34434e');
+    sky.addColorStop(0.62, '#64717f');
+    sky.addColorStop(1, '#84909b');
+    ctx.fillStyle = sky;
     ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(5,18,10,0.22)';
-    for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
-    const reflection = ctx.createLinearGradient(0, 0, 80, h);
-    reflection.addColorStop(0, 'rgba(194,222,198,0.16)');
-    reflection.addColorStop(0.45, 'rgba(194,222,198,0)');
-    ctx.fillStyle = reflection;
-    ctx.fillRect(10, 8, 236, 176);
   });
 }
 
-export function landscapeTexture() {
-  const random = seededRandom(92);
-  return canvasTexture(512, 512, (ctx, w, h) => {
-    const sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#0a1520');
-    sky.addColorStop(0.5, '#1c2b36');
-    sky.addColorStop(1, '#344550');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, w, h);
-    // Distant, snow-covered industrial blocks behind the falling particles.
-    ctx.filter = 'blur(1.8px)';
-    for (let layer = 0; layer < 3; layer++) {
-      const ground = 330 + layer * 50;
-      for (let x = -30; x < w; x += 25 + random() * 70) {
-        const height = 20 + random() * 75;
-        const width = 18 + random() * 70;
-        ctx.fillStyle = ['#25333c', '#202d37', '#192631'][layer];
-        ctx.fillRect(x, ground - height, width, height + 100);
-        ctx.fillStyle = 'rgba(161,178,184,0.12)';
-        ctx.fillRect(x - 1, ground - height, width + 2, 3);
-        if (layer === 1) {
-          ctx.fillStyle = '#192c39';
-          for (let y = ground - height + 12; y < ground; y += 12) {
-            for (let wx = x + 5; wx < x + width - 5; wx += 10) ctx.fillRect(wx, y, 3, 4);
-          }
+export function windowLightsTexture(seed) {
+  const random = seededRandom(seed);
+  const texture = canvasTexture(512, 512, (ctx) => {
+    // Pane coordinates follow the preserved Rotfront_Highrise1 atlas. Fill
+    // individual glass panes so lintels, mullions and walls remain unlit.
+    const columns = [6, 51, 97, 385, 436, 481, 527];
+    const colors = ['#776d53', '#6c767c', '#794535'];
+    for (let floor = 0; floor < 14; floor++) {
+      for (const x of columns) {
+        if (random() > 0.26) continue;
+        ctx.fillStyle = colors[Math.floor(random() * colors.length)];
+        for (let pane = 0; pane < 3; pane++) {
+          if (random() < 0.35) continue;
+          ctx.fillRect((x + 3 + pane * 8) / 2, (15 + floor * 74) / 2, 3, 11);
         }
       }
     }
-    ctx.filter = 'none';
-    const haze = ctx.createLinearGradient(0, 110, 0, h);
-    haze.addColorStop(0, 'rgba(176,187,190,0.015)');
-    haze.addColorStop(0.5, 'rgba(176,187,190,0.12)');
-    haze.addColorStop(1, 'rgba(190,197,198,0.26)');
-    ctx.fillStyle = haze;
-    ctx.fillRect(0, 0, w, h);
-    // Broad, pale fog banks soften the skyline without lighting the night sky.
-    for (const [x, y, radius, opacity] of [[100, 325, 220, 0.11], [390, 390, 260, 0.15]]) {
-      const bank = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      bank.addColorStop(0, `rgba(198,205,205,${opacity})`);
-      bank.addColorStop(1, 'rgba(198,205,205,0)');
-      ctx.fillStyle = bank;
-      ctx.fillRect(0, 0, w, h);
-    }
   });
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.flipY = false;
+  texture.magFilter = THREE.NearestFilter;
+  return texture;
 }
-

@@ -1,10 +1,23 @@
 import * as THREE from 'three';
-import { screenTexture } from './textures.js';
 
-export function createScreenBacking(geometry) {
+export function screenCenter(screen) {
+  // Shared position buffers contain the case too; only glass indices define
+  // the viewing target, including its baked-in offset and tilt.
+  screen.updateWorldMatrix(true, false);
+  const bounds = new THREE.Box3();
+  const point = new THREE.Vector3();
+  for (const index of screen.geometry.index.array) {
+    bounds.expandByPoint(point.fromBufferAttribute(screen.geometry.attributes.position, index).applyMatrix4(screen.matrixWorld));
+  }
+  return bounds.getCenter(new THREE.Vector3());
+}
+
+function geometryNormal(geometry) {
   const positions = geometry.attributes.position;
   const indices = geometry.index.array;
-  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
   const normal = new THREE.Vector3();
   for (let i = 0; i < indices.length; i += 3) {
     a.fromBufferAttribute(positions, indices[i]);
@@ -12,7 +25,19 @@ export function createScreenBacking(geometry) {
     c.fromBufferAttribute(positions, indices[i + 2]);
     normal.add(b.sub(a).cross(c.sub(a)));
   }
-  normal.normalize();
+  return normal.normalize();
+}
+
+export function screenNormal(screen) {
+  screen.updateWorldMatrix(true, false);
+  return geometryNormal(screen.geometry).transformDirection(screen.matrixWorld);
+}
+
+export function createScreenBacking(geometry) {
+  const positions = geometry.attributes.position;
+  const indices = geometry.index.array;
+  const point = new THREE.Vector3();
+  const normal = geometryNormal(geometry);
   // The Unity mesh has its tilt baked into its vertices. A world-XY plane
   // leaves a parallax gap at the glass corners, even when its AABB is wider.
   const horizontal = new THREE.Vector3(0, 1, 0).cross(normal).normalize();
@@ -21,7 +46,7 @@ export function createScreenBacking(geometry) {
   const inverse = basis.clone().invert();
   const bounds = new THREE.Box3();
   for (const index of new Set(indices)) {
-    bounds.expandByPoint(a.fromBufferAttribute(positions, index).applyMatrix4(inverse));
+    bounds.expandByPoint(point.fromBufferAttribute(positions, index).applyMatrix4(inverse));
   }
   const size = bounds.getSize(new THREE.Vector3());
   const center = bounds.getCenter(new THREE.Vector3());
@@ -37,7 +62,7 @@ export function createScreenBacking(geometry) {
   return backing;
 }
 
-export function prepareScreen(screen) {
+export function prepareScreen(screen, texture) {
   // glTF submeshes can share vertex buffers with the bezel. Clone before
   // assigning a full-screen UV rectangle to the glass alone.
   screen.geometry = screen.geometry.clone();
@@ -54,11 +79,10 @@ export function prepareScreen(screen) {
       (positions.getY(index) - bounds.min.y) / size.y);
   }
   geometry.attributes.uv.needsUpdate = true;
-  const texture = screenTexture();
   texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.generateMipmaps = false;
   texture.minFilter = THREE.LinearFilter;
-  screen.material = new THREE.MeshBasicMaterial({ map: texture, color: 0xa8cbb0 });
+  screen.material = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false });
   screen.material.name = 'Phosphor screen';
   screen.name = 'primary-screen';
   screen.castShadow = false;

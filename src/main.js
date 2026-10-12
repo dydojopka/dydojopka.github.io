@@ -1,14 +1,23 @@
 import * as THREE from 'three';
 import { createRoom } from './scene.js';
-import { cameraFrame, renderSize } from './layout.js';
+import { cameraView, renderSize } from './layout.js';
+import { createCameraControls } from './camera-controls.js';
+import { createCursor } from './cursor.js';
+import { screenCenter, screenNormal } from './screen.js';
+import { createPortfolio } from './portfolio.js';
+import { createMonitorFocus } from './monitor-focus.js';
+import { createPostProcessing } from './post-processing.js';
+import { createRenderLoop } from './render-loop.js';
 import './style.css';
 
 const host = document.querySelector('#room');
 const fallback = document.querySelector('#fallback');
+const portfolio = createPortfolio({ host });
 
 start().catch((error) => {
   host.hidden = true;
   fallback.hidden = false;
+  portfolio.setFallback(true);
   console.error('The room could not be initialized.', error);
 });
 
@@ -21,99 +30,121 @@ async function start() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
+  renderer.localClippingEnabled = true;
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', host.getAttribute('aria-label'));
   host.append(renderer.domElement);
 
-  const { scene, snow } = await createRoom();
-  const camera = new THREE.OrthographicCamera(-5, 5, 3, -3, 0.1, 70);
-  camera.position.set(2.7, 5.2, 12.8);
-  camera.lookAt(0, 2.88, -0.15);
-
-  const target = new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
-  const postScene = new THREE.Scene();
-  const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const postMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-      image: { value: target.texture }, resolution: { value: new THREE.Vector2(1, 1) },
-      frameHeight: { value: 6.35 }, backdrop: { value: new THREE.Color(0x080e12) },
-    },
-    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-    fragmentShader: `
-      uniform sampler2D image;
-      uniform vec2 resolution;
-      uniform float frameHeight;
-      uniform vec3 backdrop;
-      varying vec2 vUv;
-      void main() {
-        vec3 color = texture2D(image, vUv).rgb;
-        vec2 centered = (vUv - 0.5) * vec2(1.0, 0.85);
-        float vignette = 1.0 - smoothstep(0.16, 0.72, length(centered)) * 0.46;
-        // Fixed grain, not animated noise: only the snow moves in this scene.
-        float grain = fract(sin(dot(floor(vUv * resolution), vec2(12.9898, 78.233))) * 43758.5453);
-        // Fade the cropped architecture into the room's darkness on portrait
-        // displays, where the camera sees beyond the original ceiling/floor.
-        float portraitFade = smoothstep(3.2, 4.75, abs(vUv.y - 0.5) * frameHeight);
-        color = mix(color * vignette, backdrop * 0.35, portraitFade);
-        gl_FragColor = vec4(color, 1.0);
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-        gl_FragColor.rgb += (grain - 0.5) * 0.009;
-      }
-    `,
-    depthTest: false,
-    depthWrite: false,
-  });
-  postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMaterial));
+  const { scene, snow, screens } = await createRoom({ screenTexture: portfolio.texture });
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 70);
+  const deskBounds = new THREE.Box3().setFromObject(scene.getObjectByName('desk'));
+  const monitorFocus = screenCenter(screens.primary);
+  const monitorNormal = screenNormal(screens.primary);
+  const postProcessing = createPostProcessing(renderer);
+  const monitorControls = host.querySelector('.monitor-controls');
 
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  let frame = 0;
-  let lastTime = 0;
-  let lastDraw = 0;
   let contextLost = false;
+  let targetsDirty = true;
+  const controls = createCameraControls({ host, camera, reducedMotion, onChange: requestDraw });
+  const cursor = createCursor(host, reducedMotion);
+  const monitor = createMonitorFocus({
+    camera,
+    screen: screens.primary,
+    reducedMotion,
+    onStateChange(state) {
+      host.dataset.monitorState = state;
+      controls.setEnabled(state === 'room' && !contextLost);
+      cursor.setEnabled(state === 'room' && !contextLost);
+      portfolio.setFocused(state === 'focused');
+      monitorControls.hidden = state === 'room' || contextLost;
+      requestTargetResize();
+      requestDraw();
+      if (state === 'room') host.focus({ preventScroll: true });
+    },
+  });
+  const renderLoop = createRenderLoop({
+    update(delta) {
+      monitor.update(delta);
+      controls.update(delta);
+      snow.update(delta);
+    },
+    draw,
+  });
+  host.dataset.monitorState = 'room';
+  portfolio.attach({
+    screen: screens.primary,
+    camera,
+    onChange: requestDraw,
+    onEnter() {
+      if (!contextLost) monitor.enter();
+    },
+    onLeave: () => monitor.leave(),
+  });
+  document.addEventListener('keydown', (event) => {
+    if ((event.key === 'Escape' || event.key === 'Home') && monitor.state !== 'room' && !contextLost) {
+      event.preventDefault();
+      monitor.leave();
+    }
+  });
+
+  function requestDraw() {
+    renderLoop.requestDraw();
+  }
   function draw() {
     if (contextLost) return;
-    renderer.setRenderTarget(target);
-    renderer.render(scene, camera);
-    renderer.setRenderTarget(null);
-    renderer.render(postScene, postCamera);
+    resizeTargets();
+    postProcessing.draw(scene, camera);
+    portfolio.updateTextProjection();
+  }
+  function requestTargetResize() {
+    targetsDirty = true;
+  }
+  function resizeTargets() {
+    if (!targetsDirty) return;
+    const { width, height } = host.getBoundingClientRect();
+    if (!width || !height) return;
+    const size = renderSize(width, height, monitor.state !== 'room');
+    postProcessing.resize(size.width, size.height);
+    targetsDirty = false;
   }
   function resize() {
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
-    Object.assign(camera, cameraFrame(width / height));
-    postMaterial.uniforms.frameHeight.value = camera.top - camera.bottom;
-    camera.updateProjectionMatrix();
-    const size = renderSize(width, height);
-    renderer.setSize(size.width, size.height, false);
-    target.setSize(size.width, size.height);
-    postMaterial.uniforms.resolution.value.set(size.width, size.height);
-    draw();
-  }
-  function animate(time) {
-    frame = requestAnimationFrame(animate);
-    // 30 fps is sufficient for quiet snowfall; don't redraw the room at 120 Hz.
-    if (time - lastDraw < 1000 / 30) return;
-    const delta = lastTime ? Math.min((time - lastTime) / 1000, 0.1) : 0;
-    lastTime = lastDraw = time;
-    snow.update(delta);
-    draw();
+    const view = cameraView(width / height, deskBounds, monitorFocus, monitorNormal);
+    controls.configure(view);
+    monitor.resize(width / height, {
+      position: camera.position.clone(),
+      quaternion: camera.quaternion.clone(),
+      fov: camera.fov,
+      aspect: camera.aspect,
+    });
+    portfolio.setViewport(width, height);
+    postProcessing.setFrameHeight(monitor.state === 'room' ? view.frameHeight : 2);
+    requestTargetResize();
+    requestDraw();
   }
   function syncAnimation() {
-    cancelAnimationFrame(frame);
-    lastTime = lastDraw = 0;
-    if (contextLost || document.hidden) return;
-    draw();
-    if (!reducedMotion.matches) frame = requestAnimationFrame(animate);
+    controls.stop();
+    renderLoop.setMode({ visible: !contextLost && !document.hidden, animated: !reducedMotion.matches });
   }
+
   renderer.domElement.addEventListener('webglcontextlost', (event) => {
     event.preventDefault();
     contextLost = true;
-    cancelAnimationFrame(frame);
+    syncAnimation();
+    controls.setEnabled(false);
+    cursor.setEnabled(false);
+    monitorControls.hidden = true;
     fallback.hidden = false;
+    portfolio.setFallback(true);
   });
   renderer.domElement.addEventListener('webglcontextrestored', () => {
     contextLost = false;
+    portfolio.setFallback(false);
+    controls.setEnabled(monitor.state === 'room');
+    cursor.setEnabled(monitor.state === 'room');
+    monitorControls.hidden = monitor.state === 'room';
     fallback.hidden = true;
     renderer.shadowMap.needsUpdate = true;
     resize();
@@ -121,7 +152,10 @@ async function start() {
   });
   window.addEventListener('resize', resize);
   document.addEventListener('visibilitychange', syncAnimation);
-  reducedMotion.addEventListener('change', syncAnimation);
+  reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) monitor.finish();
+    syncAnimation();
+  });
   renderer.shadowMap.needsUpdate = true;
   resize();
   syncAnimation();
