@@ -1,0 +1,102 @@
+.portfolio-reader {
+  --terminal-green: #73df92;
+  --terminal-bright: #a3ffb7;
+  --terminal-muted: #499963;
+  --terminal-border: #245438;
+  width: min(1040px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 5px;
+  overflow: hidden;
+  border: 1px solid var(--terminal-green);
+  background: #030b07;
+  color: var(--terminal-green);
+  font-family: Consolas, 'Lucida Console', monospace;
+  box-shadow: 0 0 0 3px #07180d, 0 0 70px #0c7a3430;
+}
+.screen-access { position: fixed !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip-path: inset(50%); border: 0 !important; }
+.portfolio-reader.terminal-fallback { position: fixed; inset: 24px; z-index: 10; overflow: auto; background: #030b07; }
+.terminal-window { display: flex; flex-direction: column; max-height: calc(100dvh - 62px); }
+.terminal-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 16px; border: 1px solid var(--terminal-border); background: #0a2113; color: var(--terminal-bright); font-size: 13px; }
+.terminal-body { display: grid; grid-template-columns: 23% minmax(0, 1fr) 23%; gap: 12px; padding: 16px 10px; min-height: 0; overflow: auto; }
+.terminal-label { margin: 0 0 18px; color: var(--terminal-muted); font-size: 11px; line-height: 1.5; letter-spacing: 0.08em; }
+.terminal-nav { padding: 0 6px; }
+.terminal-nav button { display: flex; align-items: baseline; gap: 12px; width: 100%; min-height: 42px; margin: 0 0 6px; padding: 10px 8px; border: 1px solid transparent; background: transparent; color: var(--terminal-green); text-align: left; font: inherit; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.terminal-nav .terminal-home { margin-bottom: 29px; font-size: 14px; }
+.terminal-nav button.active { border: 1px dashed var(--terminal-green); background: #123a22; color: var(--terminal-bright); }
+.project-number { color: var(--terminal-muted); font-size: 10px; }
+.terminal-article, .terminal-profile { min-width: 0; padding: 20px; border: 1px solid var(--terminal-border); background: #06110b; }
+.terminal-article { overflow: auto; }
+.terminal-article h1 { margin: 0 0 22px; color: var(--terminal-bright); font-size: clamp(25px, 3vw, 36px); line-height: 1.12; font-weight: normal; overflow-wrap: anywhere; }
+.terminal-profile { padding: 15px; }
+.terminal-profile .terminal-label { margin-bottom: 12px; }
+.terminal-portrait { position: relative; overflow: hidden; background: #79d996; }
+.terminal-portrait img { width: 100%; height: auto; display: block; filter: grayscale(1) contrast(1.05); mix-blend-mode: multiply; }
+.terminal-portrait::after { position: absolute; inset: 0; background: repeating-linear-gradient(transparent 0 3px, #00000015 3px 4px); pointer-events: none; content: ''; }
+.terminal-handle { margin: 17px 0 26px; color: var(--terminal-bright); font-size: 14px; }
+.terminal-contacts { display: grid; gap: 23px; }
+.terminal-contacts a { display: grid; gap: 6px; color: var(--terminal-bright); text-decoration: none; font-size: 12px; line-height: 1.5; }
+.terminal-contacts a span:last-child { color: var(--terminal-green); font-size: 10px; overflow-wrap: anywhere; }
+.terminal-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--terminal-border); color: var(--terminal-muted); font-size: 10px; line-height: 1.6; }
+.terminal-current { color: var(--terminal-green); }
+.portfolio-reader button:hover { background: #123a22; color: var(--terminal-bright); }
+.terminal-contacts a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.portfolio-reader :focus-visible { outline: 1px dashed var(--terminal-bright); outline-offset: 3px; }
+.portfolio-reader * { scrollbar-color: #245438 #030b07; scrollbar-width: thin; }
+.terminal-article > p { font-size: 14px; line-height: 1.7; }
+.terminal-article h2 { margin-top: 28px; color: var(--terminal-bright); font-size: 16px; font-weight: normal; }
+.terminal-article a { color: var(--terminal-bright); text-underline-offset: 4px; }
+.terminal-article pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.terminal-article img { display: block; max-width: 100%; height: auto; margin: 16px auto; image-rendering: pixelated; }
+.terminal-article blockquote { margin-left: 0; padding-left: 16px; border-left: 1px solid var(--terminal-border); }
+.monitor-controls { position: absolute; inset: auto 24px 20px; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 16px; pointer-events: none; }
+.monitor-controls p { margin: 0; color: #73df92; font-size: 11px; text-shadow: 0 1px 3px #030b07; }
+#leave-monitor { min-height: 44px; padding: 10px 14px; border: 1px solid #4a9660; background: #06110be6; color: #99f7ae; font: inherit; font-size: 12px; pointer-events: auto; cursor: pointer; }
+#leave-monitor:focus-visible, #leave-monitor:hover { outline: 1px dashed #a3ffb7; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .portfolio-reader { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
+  .portfolio-reader.terminal-fallback { inset: 10px; }
+  .monitor-controls { inset: auto 14px max(14px, env(safe-area-inset-bottom)); gap: 8px; }
+  .monitor-controls p { max-width: 22ch; font-size: 10px; }
+  .terminal-window { max-height: calc(100dvh - 34px); }
+  .terminal-titlebar { padding: 8px 10px; font-size: 10px; }
+  .terminal-body { grid-template-columns: minmax(0, 1fr) 126px; gap: 8px; padding: 10px 4px; }
+  .terminal-nav { grid-column: 1 / -1; display: grid; grid-template-columns: 113px minmax(0, 1fr); align-items: start; padding: 0; }
+  .terminal-nav .terminal-home { margin: 0; min-height: 44px; font-size: 12px; }
+  .terminal-nav > .terminal-label { display: none; }
+  .terminal-projects { display: flex; gap: 4px; padding-bottom: 6px; overflow-x: auto; scrollbar-color: #245438 #030b07; }
+  .terminal-projects button { flex: 0 0 auto; width: auto; margin: 0; min-height: 44px; white-space: nowrap; font-size: 11px; }
+  .project-number { display: none; }
+  .terminal-article { padding: 13px; }
+  .terminal-article h1 { font-size: 24px; }
+  .terminal-article > .terminal-label { font-size: 9px; letter-spacing: 0; }
+  .terminal-profile { padding: 8px; }
+  .terminal-profile .terminal-label { font-size: 9px; letter-spacing: 0; }
+  .terminal-handle { font-size: 11px; }
+  .terminal-contacts a { font-size: 11px; }
+  .terminal-contacts a span:last-child { font-size: 9px; }
+  .terminal-status { padding: 8px; font-size: 9px; }
+}
+@media (max-width: 420px) {
+  .terminal-body { grid-template-columns: minmax(0, 1fr); }
+  .terminal-profile { display: grid; grid-template-columns: 84px minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 6px 16px; order: 1; }
+  .terminal-profile > .terminal-label { display: none; }
+  .terminal-portrait { grid-column: 1; grid-row: 1 / 3; align-self: start; }
+  .terminal-handle { grid-column: 2; margin: 0 0 4px; font-size: 12px; }
+  .terminal-contacts { grid-column: 2; gap: 8px; }
+  .terminal-contacts a { grid-template-columns: 70px minmax(0, 1fr); gap: 4px; font-size: 10px; }
+  .terminal-article { order: 2; }
+  .terminal-article h1 br { display: none; }
+  .terminal-article h1 { font-size: 28px; }
+}
+
+#leave-monitor { display: none; }
+@media (max-width: 700px), (pointer: coarse) {
+  #leave-monitor { display: block; }
+}
+.monitor-text-layer { position: absolute; inset: 0 auto auto 0; width: 1440px; height: 1080px; transform-origin: 0 0; pointer-events: none; z-index: 1; }
+.monitor-text-layer > span, .monitor-text-layer > a { position: absolute; white-space: pre; color: transparent; text-decoration: none; pointer-events: auto; user-select: text; -webkit-user-select: text; cursor: text; touch-action: pan-y; }
+.monitor-text-layer > a { cursor: pointer; }
+.monitor-text-layer ::selection, .portfolio-reader ::selection { background: #24633a; color: #caffd2; }
+.terminal-notice { position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%); padding: 10px 16px; border: 1px solid #499963; background: #06110bee; color: #a3ffb7; font: 12px Consolas, monospace; z-index: 30; pointer-events: none; }
