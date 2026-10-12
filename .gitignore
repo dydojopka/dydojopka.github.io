@@ -1,13 +1,18 @@
-not-repo/
+# Dependencies and generated output
 node_modules/
 dist/
 .vite/
 *.local
+*.log
 __pycache__/
 .venv/
+
+# Local references, source assets and development notes
+not-repo/
 AGENTS.md
 README.md
 tests/
 asset-sources/
 scripts/
+docs/
 PLAN.md
