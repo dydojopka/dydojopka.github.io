@@ -4,7 +4,7 @@ export default defineConfig({
   base: '/',
   build: {
     target: 'es2022',
-    // Three.js is the only runtime dependency. Keep it separately cacheable.
+    // Keep runtime dependencies separately cacheable from the scene and content.
     rolldownOptions: {
       output: { manualChunks: (id) => id.includes('node_modules') ? 'three' : undefined },
     },
