@@ -54,7 +54,7 @@ export function createExterior(kit) {
   });
   ground.updateWorldMatrix(true, true);
   const ray = new THREE.Raycaster();
-  function restOnGround(object) {
+  function restOnGround(object, elevation = 0) {
     const bounds = new THREE.Box3().setFromObject(object);
     const heights = [];
     for (const x of [bounds.min.x, (bounds.min.x + bounds.max.x) / 2, bounds.max.x]) {
@@ -65,7 +65,7 @@ export function createExterior(kit) {
       }
     }
     if (!heights.length) throw new Error(`Exterior model has no ground beneath it: ${object.name}`);
-    object.position.y += Math.min(...heights) - bounds.min.y - 0.03;
+    object.position.y += Math.min(...heights) - bounds.min.y - 0.03 + elevation;
   }
 
   // Original RES_School facades and dishes, composed at several depths. The
@@ -73,7 +73,7 @@ export function createExterior(kit) {
   const buildings = [
     place('highrise', 17, [-1, 0, -17], Math.PI, 0x667785, 0.43, 17),
     place('highrise', 17, [11, 0, -18.5], Math.PI - 0.1, 0x607584, 0.49, 23),
-    place('highrise', 19, [-12, 0, -19], Math.PI + 0.15, 0x536776, 0.46, 31),
+    place('highrise', 19, [-12, 0, -21.5], Math.PI + 0.15, 0x536776, 0.46, 31),
   ];
   const dishes = [
     place('satellite-dish', 6.3, [-11, 0, -27], 0.55, 0x17232b, 0.42),
@@ -81,6 +81,8 @@ export function createExterior(kit) {
     place('satellite-dish', 4.1, [1, 0, -28], 0.4, 0x17232b, 0.46),
     place('satellite-dish', 6.2, [4.5, 0, -28], -0.8, 0x17232b, 0.44),
   ];
-  for (const object of [...buildings, ...dishes]) restOnGround(object);
+  for (const object of buildings) restOnGround(object);
+  // A small rise reveals more of the two central dishes above the rooftops.
+  dishes.forEach((object, index) => restOnGround(object, index === 1 || index === 2 ? 0.35 : 0));
   return outside;
 }
