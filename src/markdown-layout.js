@@ -1,10 +1,10 @@
 export const TERMINAL_FONT = 'Consolas, "Lucida Console", monospace';
 
-export function runFont(run, size) {
-  return `${run.italic ? 'italic ' : ''}${run.bold ? 'bold ' : ''}${size}px ${TERMINAL_FONT}`;
+export function runFont(run, size, fontFamily = TERMINAL_FONT) {
+  return `${run.italic ? 'italic ' : ''}${run.bold ? 'bold ' : ''}${size}px ${fontFamily}`;
 }
 
-export function layoutMarkdown(ctx, blocks, width, baseSize = 24, images = new Map()) {
+export function layoutMarkdown(ctx, blocks, width, baseSize = 24, images = new Map(), fontFamily = TERMINAL_FONT) {
   const items = [];
   let top = 0;
   for (const block of blocks) {
@@ -26,7 +26,7 @@ export function layoutMarkdown(ctx, blocks, width, baseSize = 24, images = new M
     let y = top + size;
     for (const source of block.runs) {
       const run = { ...source, bold: source.bold || block.type === 'heading' };
-      ctx.font = runFont(run, size);
+      ctx.font = runFont(run, size, fontFamily);
       for (const part of run.text.split(/(\n|[^\S\n]+|[^\s]+)/).filter(Boolean)) {
         if (part === '\n') { x = 0; y += lineHeight; continue; }
         const space = /^\s+$/.test(part);
