@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { convertCardReader, paintPanel, printerOpening, topVentOpening } from './printer-body.js';
 import { createPrinterIndicators } from './printer-indicators.js';
+import { createPrinterDisplay } from './printer-display.js';
+import { PAPER_WIDTH, PAPER_HEIGHT, PAPER_THICKNESS } from './printer-paper.js';
 
 export function buildPrinter(body, materials) {
   body.name = 'printer';
@@ -66,7 +68,6 @@ export function buildPrinter(body, materials) {
     box(`output-guide-${sign}`, [0.045, 0.065, 0.85], [sign * 0.8175, 0.145, 1.14]);
     box(`output-support-${sign}`, [0.09, 0.0875, 0.86], [sign * 0.65, 0.04375, 1.135], rubber);
   }
-  box('output-sheet', [1.38, 0.009, 0.98], [0, 0.133, 1.02], paper);
   // The top-mounted hopper shares the original paint atlas and chassis axes.
   box('feed-throat-interior', [1.46, 0.015, 0.30], [0, 0.43, -0.17], dark);
   box('feeder-front-foot', [1.56, 0.035, 0.05], [0, 0.5647, 0.005]);
@@ -96,7 +97,7 @@ export function buildPrinter(body, materials) {
   }
   // A4 proportions; the lower sheet edges enter the intake between the rollers.
   for (let i = 0; i < 4; i++) {
-    box(`input-sheet-${i}`, [1.38, 1.95, 0.005], [(i % 2) * 0.003, 0.855 + i * 0.002, -0.025 + i * 0.009], paper, hopper);
+    box(`input-sheet-${i}`, [PAPER_WIDTH, PAPER_HEIGHT, PAPER_THICKNESS], [(i % 2) * 0.003, 0.855 + i * 0.002, -0.025 + i * 0.009], paper, hopper);
   }
   // Retain the manufacturer's original blue lettering and caution emblem.
   function decal(name, size, position, uv) {
@@ -112,5 +113,6 @@ export function buildPrinter(body, materials) {
   decal('maker-badge', [0.99, 0.10], [-0.35, 0.447, 0.7113], [0.02, 0.285, 0.52, 0.343]);
   decal('caution-badge', [0.13, 0.13], [0.76, 0.399, 0.7113], [0.876, 0.185, 0.95, 0.265]);
   body.add(createPrinterIndicators());
+  body.add(createPrinterDisplay());
   return body;
 }
