@@ -40,6 +40,8 @@ export function projectionMatrix(source, destination) {
 }
 
 export function createMonitorTextLayer(host, onLink) {
+  const events = new AbortController();
+  const options = { signal: events.signal };
   const layer = document.createElement('div');
   layer.className = 'monitor-text-layer'; layer.hidden = true;
   layer.setAttribute('aria-hidden', 'true'); host.append(layer);
@@ -47,16 +49,16 @@ export function createMonitorTextLayer(host, onLink) {
   let anchorScreen;
   let anchors;
   let selecting = false;
-  layer.addEventListener('pointerdown', (event) => { selecting = event.pointerType === 'mouse'; });
-  document.addEventListener('pointerup', () => { selecting = false; });
-  document.addEventListener('pointercancel', () => { selecting = false; });
+  layer.addEventListener('pointerdown', (event) => { selecting = event.pointerType === 'mouse'; }, options);
+  document.addEventListener('pointerup', () => { selecting = false; }, options);
+  document.addEventListener('pointercancel', () => { selecting = false; }, options);
   layer.addEventListener('click', (event) => {
     const link = event.target.closest('a');
     if (!link) return;
     event.preventDefault();
     if (!window.getSelection()?.isCollapsed) return;
     onLink(link.getAttribute('href'));
-  });
+  }, options);
   return {
     get selecting() { return selecting; },
     setContent(items, key) {
@@ -87,5 +89,6 @@ export function createMonitorTextLayer(host, onLink) {
       if (matrix) layer.style.transform = `matrix3d(${matrix.join(',')})`;
       else layer.hidden = true;
     },
+    dispose() { events.abort(); layer.remove(); },
   };
 }

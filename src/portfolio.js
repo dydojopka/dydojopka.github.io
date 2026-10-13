@@ -11,6 +11,8 @@ const htmlText = (text) => runsHtml([{ text }]);
 const actionKey = (action) => action ? `${action.type}:${action.id ?? action.href ?? ''}` : '';
 
 export function createPortfolio({ host }) {
+  const events = new AbortController();
+  const listen = (target, name, handler, options = {}) => target.addEventListener(name, handler, { ...options, signal: events.signal });
   const canvas = document.createElement('canvas');
   canvas.width = SCREEN_WIDTH;
   canvas.height = SCREEN_HEIGHT;
@@ -18,7 +20,7 @@ export function createPortfolio({ host }) {
   texture.colorSpace = THREE.SRGBColorSpace;
   let selected = 'about';
   let focused = false;
-  let fallback = false;
+  let enabled = false;
   let compact = false;
   let menuOpen = false;
   let menuScroll = 0;
@@ -32,6 +34,7 @@ export function createPortfolio({ host }) {
   let leave = () => {};
   let screen;
   let camera;
+  let scene;
   let pointerDown;
   let imageRevision = 0;
   const images = new Map();
@@ -44,8 +47,8 @@ export function createPortfolio({ host }) {
     if (run.type !== 'image' || !run.src || images.has(run.src)) continue;
     const image = new Image();
     if (/^https?:\/\//i.test(run.src)) image.crossOrigin = 'anonymous';
-    image.addEventListener('load', imageChanged);
-    image.addEventListener('error', imageChanged);
+    listen(image, 'load', imageChanged);
+    listen(image, 'error', imageChanged);
     images.set(run.src, image);
     image.src = run.src;
   }
@@ -60,8 +63,8 @@ export function createPortfolio({ host }) {
   const pointer = new THREE.Vector2();
   const portrait = new Image();
   portrait.src = `${import.meta.env.BASE_URL}${profile.photo.replace(/^\//, '')}`;
-  portrait.addEventListener('load', paint);
-  portrait.addEventListener('error', paint);
+  listen(portrait, 'load', paint);
+  listen(portrait, 'error', paint);
   const painter = createPortfolioPainter(canvas, { profile, projects, images, portrait });
   const reader = document.createElement('section');
   reader.id = 'portfolio-reader';
@@ -83,12 +86,12 @@ export function createPortfolio({ host }) {
         <div class="terminal-contacts">${profile.contacts.map((contact) => `<a href="${htmlText(contact.href)}" ${/^https?:/.test(contact.href) ? 'target="_blank" rel="noopener noreferrer"' : ''}><span>${htmlText(contact.label)} ${contact.href.startsWith('mailto:') ? '⧉' : '↗'}</span><span>${htmlText(contact.value)}</span></a>`).join('')}</div>
       </aside>
     </div>
-    <footer class="terminal-status"><span class="terminal-current"></span><span>РЕЖИМ БЕЗ 3D</span></footer>
+    <footer class="terminal-status"><span class="terminal-current"></span></footer>
   </div>`;
   document.body.append(reader);
   const article = reader.querySelector('.terminal-article');
   const leaveButton = host.querySelector('#leave-monitor');
-  leaveButton.addEventListener('click', () => leave());
+  listen(leaveButton, 'click', () => leave());
 
   function currentPage() {
     return projects.find((project) => project.id === selected) ?? about;
@@ -114,16 +117,16 @@ export function createPortfolio({ host }) {
     renderContent();
     paint();
   }
-  reader.addEventListener('click', (event) => {
+  listen(reader, 'click', (event) => {
     const email = event.target.closest('a[href^="mailto:"]');
-    if (email && (focused || fallback)) {
+    if (email && focused) {
       event.preventDefault();
       copyContact(email.getAttribute('href'));
     }
     const button = event.target.closest('[data-project]');
-    if (button && (focused || fallback)) select(button.dataset.project);
+    if (button && focused) select(button.dataset.project);
   });
-  reader.addEventListener('focusin', (event) => {
+  listen(reader, 'focusin', (event) => {
     const element = event.target;
     const id = element.dataset.project;
     if (id && id !== 'about') {
@@ -139,8 +142,8 @@ export function createPortfolio({ host }) {
     contentScroll = Math.max(0, Math.min(contentScroll + amount, Math.max(0, contentHeight - contentRect.height)));
     if (previous !== contentScroll) paint();
   }
-  document.addEventListener('keydown', (event) => {
-    if (!focused || fallback || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  listen(document, 'keydown', (event) => {
+    if (!focused || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       leave();
@@ -160,18 +163,23 @@ export function createPortfolio({ host }) {
     ({ regions, contentRect, contentHeight } = painting);
     textLayer.setContent(compact && menuOpen ? [] : painting.selectableItems,
       `${selected}:${compact}:${menuOpen}:${contentScroll}:${imageRevision}`);
-    textLayer.update(screen, camera, focused && !fallback);
+    textLayer.update(screen, camera, focused && enabled);
     texture.needsUpdate = true;
     notify();
   }
 
   function hit(event) {
-    if (!screen || !camera || fallback) return undefined;
+    if (!screen || !camera || !enabled) return undefined;
     const rect = host.getBoundingClientRect();
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2);
     camera.updateMatrixWorld();
     raycaster.setFromCamera(pointer, camera);
-    return focused ? raycaster.intersectObject(screen, false)[0] : raycaster.intersectObject(screen.parent, true)[0];
+    const nearest = raycaster.intersectObject(scene, true).find((hit) => hit.object.visible);
+    if (!nearest) return undefined;
+    if (focused) return nearest.object === screen ? nearest : undefined;
+    let object = nearest.object;
+    while (object && object !== screen.parent) object = object.parent;
+    return object ? nearest : undefined;
   }
   async function copyContact(href) {
     const copied = await copyEmail(href);
@@ -202,13 +210,13 @@ export function createPortfolio({ host }) {
       if (previous !== menuScroll) paint();
     } else scrollContent(amount);
   }
-  host.addEventListener('pointerdown', (event) => {
+  listen(host, 'pointerdown', (event) => {
     const touchText = event.pointerType !== 'mouse' && event.target.closest('.monitor-text-layer');
-    if (event.button !== 0 || (event.target.tagName !== 'CANVAS' && !touchText)) return;
+    if (!enabled || event.button !== 0 || (event.target.tagName !== 'CANVAS' && !touchText)) return;
     pointerDown = { x: event.clientX, y: event.clientY, lastY: event.clientY, pointerType: event.pointerType };
     if (focused && !touchText) host.setPointerCapture(event.pointerId);
   });
-  host.addEventListener('pointermove', (event) => {
+  listen(host, 'pointermove', (event) => {
     if (!focused || textLayer.selecting) return;
     if (event.pointerType !== 'mouse' && !window.getSelection()?.isCollapsed) return;
     const intersection = hit(event);
@@ -223,8 +231,8 @@ export function createPortfolio({ host }) {
       }
     }
   });
-  host.addEventListener('pointercancel', () => { pointerDown = undefined; });
-  host.addEventListener('pointerup', (event) => {
+  listen(host, 'pointercancel', () => { pointerDown = undefined; });
+  listen(host, 'pointerup', (event) => {
     const down = pointerDown;
     pointerDown = undefined;
     if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
@@ -237,7 +245,7 @@ export function createPortfolio({ host }) {
     }
     perform(screenAction(intersection.uv, regions, focused));
   });
-  host.addEventListener('wheel', (event) => {
+  listen(host, 'wheel', (event) => {
     if (!focused) return;
     const intersection = hit(event);
     if (!intersection) return;
@@ -248,8 +256,15 @@ export function createPortfolio({ host }) {
   paint();
   return {
     texture,
-    attach(options) { ({ screen, camera, onChange: notify, onEnter: enter, onLeave: leave } = options); },
-    updateTextProjection() { textLayer.update(screen, camera, focused && !fallback); },
+    attach(options) { ({ screen, camera, scene, onChange: notify, onEnter: enter, onLeave: leave } = options); },
+    setEnabled(value) {
+      enabled = value;
+      pointerDown = undefined;
+      reader.hidden = !value;
+      notice.hidden = true;
+      if (!value) this.setFocused(false);
+    },
+    updateTextProjection() { textLayer.update(screen, camera, focused && enabled); },
     setViewport(width, height) {
       const next = Math.min(width, height * 4 / 3) < 700;
       if (compact === next) return;
@@ -258,20 +273,19 @@ export function createPortfolio({ host }) {
       paint();
     },
     setFocused(value) {
+      if (focused === value) return;
       focused = value;
-      reader.inert = !value && !fallback;
+      reader.inert = !value;
       highlighted = '';
       paint();
       if (!value) window.getSelection()?.removeAllRanges();
-      if (value && !fallback) article.focus({ preventScroll: true });
+      if (value) article.focus({ preventScroll: true });
     },
-    setFallback(value) {
-      fallback = value;
-      reader.classList.toggle('screen-access', !value);
-      reader.classList.toggle('terminal-fallback', value);
-      reader.inert = !value && !focused;
-      textLayer.update(screen, camera, focused && !fallback);
-      if (value) reader.querySelector(`[data-project="${selected}"]`)?.focus({ preventScroll: true });
+    dispose() {
+      events.abort();
+      clearTimeout(noticeTimer);
+      textLayer.dispose();
+      reader.remove(); notice.remove(); texture.dispose();
     },
   };
 }

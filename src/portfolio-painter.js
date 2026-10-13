@@ -181,7 +181,6 @@ export function createPortfolioPainter(canvas, { profile, projects, images, port
         selectableText(contact.value, 1090, y + 63, 20, COLORS.text, contact.href);
       });
       text(`~/portfolio/${selected}`, 48, 1030, 23);
-      text(focused ? 'ESC — К СТОЛУ' : 'НАЖМИТЕ НА ЭКРАН', 1112, 1030, 20, COLORS.muted);
     }
     ctx.fillStyle = 'rgba(0, 0, 0, 0.07)';
     for (let y = 0; y < SCREEN_HEIGHT; y += 4) ctx.fillRect(24, y, 1392, 1);
