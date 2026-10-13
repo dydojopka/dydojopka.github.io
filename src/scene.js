@@ -11,15 +11,22 @@ import { createRoomEnclosure } from './room-enclosure.js';
 import { createRoomLighting } from './room-lighting.js';
 import { cameraView } from './layout.js';
 import { settleShelfDecor } from './upper-shelf.js';
+import { disposeScene } from './dispose-scene.js';
 
 // Authored meshes and atlases from MyScene and MED_Medical. The converter bakes
 // Unity transforms and clips the larger building to the workstation room.
 export async function createRoom({ screenTexture }) {
   const loader = new GLTFLoader();
-  const [{ scene: kit }, { scene: exterior }] = await Promise.all([
+  const models = await Promise.allSettled([
     loader.loadAsync(`${import.meta.env.BASE_URL}models/workstation.glb`),
     loader.loadAsync(`${import.meta.env.BASE_URL}models/exterior.glb`),
   ]);
+  const failure = models.find((model) => model.status === 'rejected');
+  if (failure) {
+    for (const model of models) if (model.status === 'fulfilled') disposeScene(model.value.scene);
+    throw failure.reason;
+  }
+  const [{ scene: kit }, { scene: exterior }] = models.map((model) => model.value);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x080e12);
   scene.fog = new THREE.FogExp2(0x080e12, 0.032);
@@ -66,7 +73,7 @@ export async function createRoom({ screenTexture }) {
   const metal = material(0x394b42, { metalness: 0.3 });
   const dark = material(0x111b16);
   const paper = material(0xbec4ac, { map: null });
-  buildPrinter(staticRoot.getObjectByName('card-reader'), { paper });
+  const printer = buildPrinter(staticRoot.getObjectByName('card-reader'), { paper });
   addContactShadows(staticRoot, ['monitor', 'keyboard', 'radio-stack', 'plant', 'desk-lamp', 'printer', 'book'], desktop + 0.001);
   const cube = new THREE.BoxGeometry(1, 1, 1);
   function box(size, position, mat, parent = staticRoot) {
@@ -95,13 +102,11 @@ export async function createRoom({ screenTexture }) {
   scene.add(createExterior(exterior));
   box([6.4, 0.032, 0.18], [0, 2.12, -2.77], paper);
   box([0.85, 0.075, 0.86], [4.18, 2.7475, -2.15], metal);
-  const bulb = box([0.2, 0.015, 0.22], [1.23, desktop + 0.88, 0.26], new THREE.MeshBasicMaterial({ color: 0xc79d60 }));
-  bulb.castShadow = false;
   cable([[-0.15, desktop + 0.14, -1.2], [0.4, desktop + 0.01, -1.42], [0.68, 1.7, -1.49], [0.7, 0.12, -1.49], [2.9, 0.08, -2.1]]);
   cable([[2.92, desktop + 0.09, -0.7], [3.35, desktop, -1.28], [3.55, 1.8, -1.5], [3.55, 0.1, -1.75], [4.2, 0.1, -2.6]]);
   const radioBounds = new THREE.Box3().setFromObject(staticRoot.getObjectByName('radio-stack'));
   scene.add(createRoomLighting(focus, normal, radioBounds));
   const snow = createSnow();
   scene.add(snow.mesh);
-  return { scene, snow, screens: { primary: screen } };
+  return { scene, snow, screens: { primary: screen }, printer };
 }

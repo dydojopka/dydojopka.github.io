@@ -99,9 +99,8 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
     change(0, profile.initialPitch);
   }
   function updateHelp() {
-    help.textContent = coarsePointer.matches ? 'Проведите пальцем, чтобы осмотреть стол.'
-        : 'Осмотр - курсор / ↑←↓→ / WASD; К монитору - home';
-    host.querySelector('#reset-view').hidden = !coarsePointer.matches;
+    help.textContent = coarsePointer.matches ? 'Осмотр — свайп · Выбор — нажатие'
+        : 'Осмотр — курсор / ↑←↓→ / WASD · Выбор — клик / P / M · Сброс — Home';
   }
 
   host.addEventListener('pointerdown', (event) => {
@@ -147,7 +146,6 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
       change(state.targetYaw + yaw, state.targetPitch + pitch);
     }
   }, options);
-  host.querySelector('#reset-view').addEventListener('click', reset, options);
   window.addEventListener('blur', stop, options);
   document.addEventListener('visibilitychange', stop, options);
   reducedMotion.addEventListener('change', () => { stop(); updateHelp(); }, options);
