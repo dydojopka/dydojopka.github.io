@@ -15,6 +15,9 @@ import { about } from './portfolio-content.js';
 import { createPostProcessing } from './post-processing.js';
 import { createRenderLoop } from './render-loop.js';
 import { disposeScene } from './dispose-scene.js';
+import { createSceneAudio } from './scene-audio.js';
+import { createSceneAudioPlacement } from './scene-audio-placement.js';
+import { readSceneVolume, saveSceneVolume, syncSceneVolumeControl } from './scene-audio-controls.js';
 import './style.css';
 
 export async function createSceneRuntime({ onCard, onLost, onReady, onFailure }) {
@@ -30,14 +33,34 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
   let target = 'room';
   let targetsDirty = true;
   let viewport = { width: window.innerWidth, height: window.innerHeight };
+  let syncAudioPose = () => {};
   const monitorControls = host.querySelector('.monitor-controls');
   const printerControls = host.querySelector('.printer-controls');
   const leaveButton = host.querySelector('#leave-printer');
   const status = host.querySelector('#printer-status');
+  const soundControl = host.querySelector('#scene-sound-control');
+  const soundSlider = host.querySelector('#scene-sound');
+  const audio = createSceneAudio({
+    baseUrl: import.meta.env.BASE_URL,
+    initialVolume: readSceneVolume(window),
+    onChange(volume) {
+      syncSceneVolumeControl(soundSlider, soundControl, volume);
+      saveSceneVolume(window, volume);
+    },
+  });
+  syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
+  soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
+  function activateAudio(event) {
+    if (visible && !contextLost && !event.altKey && !event.ctrlKey && !event.metaKey) audio.activate();
+  }
+  host.addEventListener('pointerdown', activateAudio, { ...options, capture: true });
+  host.addEventListener('keydown', activateAudio, { ...options, capture: true });
 
   function requestDraw() { renderLoop?.requestDraw(); }
   function syncInput() {
     const active = visible && !contextLost && !disposed;
+    syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
+    soundControl.hidden = !active;
     const roomActive = active && focus?.state === 'room';
     controls?.setEnabled(roomActive);
     cursor?.setEnabled(roomActive);
@@ -49,6 +72,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
   }
   function syncAnimation() {
     controls?.stop();
+    audio.setActive(visible && !contextLost && !document.hidden && !disposed);
     renderLoop?.setMode({ visible: visible && !contextLost && !document.hidden && !disposed, animated: !reducedMotion.matches });
   }
   function dispose() {
@@ -56,12 +80,14 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
     disposed = true;
     renderLoop?.setMode({ visible: false, animated: false });
     events.abort();
+    audio.dispose();
     controls?.dispose(); cursor?.dispose();
     portfolio?.dispose(); display?.dispose(); printerController?.dispose();
     postProcessing?.dispose();
     if (scene) disposeScene(scene);
     renderer?.dispose(); renderer?.domElement.remove();
     monitorControls.hidden = printerControls.hidden = true;
+    soundControl.hidden = true;
   }
 
   try {
@@ -106,6 +132,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время загрузки сцены.');
     const { snow, screens, printer } = room;
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 70);
+    syncAudioPose = createSceneAudioPlacement({ audio, camera, screen: screens.primary, printer });
     const deskBounds = new THREE.Box3().setFromObject(scene.getObjectByName('desk'));
     const monitorCenter = screenCenter(screens.primary);
     const monitorNormal = screenNormal(screens.primary);
@@ -122,6 +149,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
       onChange(state) {
         const wasReturning = host.dataset.paperState === 'returning';
         host.dataset.printState = state.job;
+        audio.setPrinting(['feeding', 'printing', 'ejecting'].includes(state.job));
         host.dataset.paperState = state.paper;
         status.textContent = PRINTER_STATUS[state.job];
         display.paint(state.job);
@@ -185,7 +213,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
       onEnter: () => enter('monitor'), onLeave: leave });
     leaveButton.addEventListener('click', leave, options);
     document.addEventListener('keydown', (event) => {
-      if (!visible || contextLost || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      if (!visible || contextLost || event.target === soundSlider || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
       if (visible && !contextLost && focus.state !== 'room' && ['Escape', 'Home'].includes(event.key)) {
         event.preventDefault(); leave();
       } else if (focus.state === 'room' && ['KeyP', 'KeyM'].includes(event.code)) {
@@ -263,6 +291,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
     }
     function draw() {
       if (contextLost || disposed) return;
+      syncAudioPose();
       if (targetsDirty) {
         const size = renderSize(viewport.width, viewport.height, target === 'monitor' && focus.state !== 'room');
         postProcessing.resize(size.width, size.height);
@@ -290,6 +319,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure })
     }
     window.addEventListener('resize', resize, options);
     document.addEventListener('visibilitychange', syncAnimation, options);
+    window.addEventListener('pagehide', () => audio.setActive(false), options);
+    window.addEventListener('pageshow', syncAnimation, options);
     reducedMotion.addEventListener('change', () => {
       if (reducedMotion.matches) { focus.finish(); printerController.finish(); }
       syncAnimation();

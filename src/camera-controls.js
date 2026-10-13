@@ -104,7 +104,8 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
   }
 
   host.addEventListener('pointerdown', (event) => {
-    if (!enabled || !profile || event.button !== 0 || event.target.closest('button')) return;
+    if (!enabled || !profile || event.button !== 0) return;
+    if (event.target.closest('button, input, .scene-sound')) { stop(); return; }
     host.focus({ preventScroll: true });
     if (event.pointerType === 'mouse' && !reducedMotion.matches) return;
     stop();
@@ -122,7 +123,7 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
       change(yaw, pitch, true);
       return;
     }
-    if (event.pointerType !== 'mouse' || reducedMotion.matches || event.target.closest('button')) {
+    if (event.pointerType !== 'mouse' || reducedMotion.matches || event.target.closest('button, input, .scene-sound')) {
       input.x = input.y = 0;
       return;
     }
@@ -134,7 +135,7 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
   }
   host.addEventListener('pointerleave', () => { if (!drag) stop(); }, options);
   host.addEventListener('keydown', (event) => {
-    if (!enabled || !profile || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (!enabled || !profile || event.target.closest('input') || event.altKey || event.ctrlKey || event.metaKey) return;
     const direction = keyboardDirection(event);
     if (event.key === 'Home') {
       event.preventDefault();

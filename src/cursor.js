@@ -54,7 +54,7 @@ export function createCursor(host, reducedMotion) {
     if (!reducedMotion.matches && history.length) frame = requestAnimationFrame(draw);
   }
   host.addEventListener('pointermove', (event) => {
-    if (!enabled || event.pointerType !== 'mouse' || !finePointer.matches) {
+    if (!enabled || event.pointerType !== 'mouse' || !finePointer.matches || event.target.closest('.scene-sound')) {
       hide();
       return;
     }

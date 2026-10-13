@@ -10,6 +10,18 @@ html[data-mode='scene'], html[data-mode='scene'] body { width: 100%; height: 100
 .view-controls button, .printer-controls button { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid #46574d; background: #101815ed; color: #b6c4b9; font: inherit; font-size: 12px; pointer-events: auto; cursor: pointer; }
 .view-controls button:hover, .view-controls button:focus-visible, .printer-controls button:hover, .printer-controls button:focus-visible { outline: 1px dashed #a3ffb7; outline-offset: 3px; color: #a3ffb7; }
 .printer-controls button:disabled { opacity: 0.45; cursor: default; }
+.scene-sound { --sound-level: 0%; position: absolute; top: max(10px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); z-index: 3; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; background: #10181599; color: #9aaba1; }
+.scene-sound svg { width: 18px; height: 18px; flex: none; }
+.scene-sound .sound-muted, .scene-sound[data-muted='true'] .sound-wave { display: none; }
+.scene-sound[data-muted='true'] .sound-muted { display: block; }
+.scene-sound input { appearance: none; width: 82px; height: 44px; padding: 0; margin: 0; background: transparent; cursor: pointer; }
+.scene-sound input::-webkit-slider-runnable-track { height: 2px; background: linear-gradient(to right, #9aaba1 var(--sound-level), #46574d var(--sound-level)); }
+.scene-sound input::-webkit-slider-thumb { appearance: none; width: 6px; height: 12px; margin-top: -5px; border: 0; border-radius: 0; background: #b6c4b9; }
+.scene-sound input::-moz-range-track { height: 2px; background: #46574d; }
+.scene-sound input::-moz-range-progress { height: 2px; background: #9aaba1; }
+.scene-sound input::-moz-range-thumb { width: 6px; height: 12px; border: 0; border-radius: 0; background: #b6c4b9; }
+.scene-sound input:focus-visible { outline: 1px dashed #a3ffb7; outline-offset: 1px; }
+.scene-sound:hover { color: #b6c4b9; }
 .mobile-return { display: none; }
 @media (max-width: 700px), (pointer: coarse) { .mobile-return { display: block; } }
 @media (max-width: 600px) {
