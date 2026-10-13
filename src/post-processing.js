@@ -59,5 +59,14 @@ export function createPostProcessing(renderer) {
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
     },
+    restore() {
+      target.dispose();
+      material.needsUpdate = true;
+    },
+    dispose() {
+      target.dispose();
+      material.dispose();
+      scene.children[0].geometry.dispose();
+    },
   };
 }
