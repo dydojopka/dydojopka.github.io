@@ -100,7 +100,7 @@ export function parseMarkdownFile(path, source, assets = {}, base = '/') {
   }
   return { id, title, category: metadata.category ?? (id === 'about' ? 'ЛИЧНАЯ КАРТОЧКА' : 'ПРОЕКТ'), metadata,
     order: Number.isFinite(Number(metadata.order)) ? Number(metadata.order) : Infinity,
-    blocks, contacts };
+    blocks, contacts, tokens };
 }
 
 export function loadMarkdownFiles(files, assets = {}, base = '/') {
@@ -111,7 +111,7 @@ export function loadMarkdownFiles(files, assets = {}, base = '/') {
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title, 'ru') || a.id.localeCompare(b.id)) };
 }
 
-const escapeHtml = (text) => text.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+export const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 export function runsHtml(runs) {
   return runs.map((run) => {
     let text = escapeHtml(run.text).replace(/\n/g, '<br>');
