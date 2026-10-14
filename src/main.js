@@ -25,6 +25,11 @@ import { radioView, radioFrontHit, radioEmitter } from './radio-focus.js';
 import { hitBelongsTo, nearestVisibleHit } from './scene-hit.js';
 import { createKeyboardController } from './keyboard-controller.js';
 import { createKeyboardAudio } from './keyboard-audio.js';
+import { createSceneEffectsAudio } from './scene-effects-audio.js';
+import { createBookController } from './book-controller.js';
+import { BOOK_MESSAGES, createBookDialog } from './book-dialog.js';
+import { createMonitorInterference } from './monitor-interference.js';
+import './book-dialog.css';
 import './style.css';
 
 export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, onProgress = () => {} }) {
@@ -33,7 +38,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   const options = { signal: events.signal };
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let renderer, portfolio, scene, postProcessing, controls, cursor, display, printerController, renderLoop;
-  let radioDisplay, keyboardController;
+  let radioDisplay, keyboardController, bookController, bookDialog, monitorInterference;
   let visible = false;
   let contextLost = false;
   let disposed = false;
@@ -71,6 +76,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   audio.addStream(radioAudio);
   const keyboardAudio = createKeyboardAudio({ baseUrl: import.meta.env.BASE_URL });
   audio.addStream(keyboardAudio);
+  const paperAudio = createSceneEffectsAudio({ baseUrl: import.meta.env.BASE_URL, sounds: { page: 'page-turn.mp3' } });
+  audio.addStream(paperAudio);
   syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
   soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
   function activateAudio(event = {}) {
@@ -81,7 +88,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
 
   function requestDraw() { renderLoop?.requestDraw(); }
   function syncInput() {
-    const active = visible && !contextLost && !disposed;
+    const active = visible && !contextLost && !disposed && !bookDialog?.open;
     syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
     soundControl.hidden = !active;
     const roomActive = active && focus?.state === 'room';
@@ -96,6 +103,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   }
   function syncAnimation() {
     controls?.stop();
+    bookDialog?.setActive(visible && !contextLost && !document.hidden && !disposed);
     audio.setActive(visible && !contextLost && !document.hidden && !disposed);
     renderLoop?.setMode({ visible: visible && !contextLost && !document.hidden && !disposed, animated: !reducedMotion.matches });
   }
@@ -109,6 +117,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     portfolio?.dispose(); display?.dispose(); printerController?.dispose();
     radioDisplay?.dispose();
     keyboardController?.dispose();
+    bookController?.dispose(); bookDialog?.dispose(); monitorInterference?.dispose();
     postProcessing?.dispose();
     if (scene) disposeScene(scene);
     renderer?.dispose(); renderer?.domElement.remove();
@@ -123,6 +132,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     renderer.domElement.addEventListener('webglcontextlost', (event) => {
       event.preventDefault();
       contextLost = true;
+      cancelBookEvent();
       postProcessing?.lose();
       syncAnimation(); syncInput();
       onLost();
@@ -163,6 +173,19 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     const { snow, screens, printer } = room;
     const keyboard = scene.getObjectByName('keyboard');
     keyboardController = createKeyboardController({ keyboard, reducedMotion, onPress: (sound, position) => keyboardAudio.play(sound, position) });
+    const book = scene.getObjectByName('book');
+    monitorInterference = createMonitorInterference(screens.primary);
+    bookDialog = createBookDialog({ document, reducedMotion, onChange: () => { syncInput(); requestDraw(); } });
+    bookController = createBookController({
+      book, shadow: scene.getObjectByName('book-contact-shadow'), reducedMotion,
+      onRead() {
+        if (!visible || contextLost || document.hidden || focus.state !== 'room') return false;
+        if (!bookDialog.show()) return false;
+        if (!reducedMotion.matches) monitorInterference.trigger();
+        requestDraw();
+        return true;
+      },
+    });
     const radio = scene.getObjectByName('radio-stack');
     radioDisplay = createRadioDisplay({ radio, atlas: radioAtlas, onChange: requestDraw });
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 70);
@@ -175,11 +198,13 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     cursor = createCursor(host, reducedMotion);
     display = createPrinterDisplayPainter(printer.getObjectByName('printer-display-screen'));
     onProgress('card');
+    await document.fonts?.load('48px "Signalis Dialogue"', BOOK_MESSAGES.join(' ')).catch(() => {});
     const cardImages = await loadBusinessCardImages(about, import.meta.env.BASE_URL);
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время подготовки визитки.');
     printerController = createPrinterController({
       printer, scene, camera, reducedMotion,
       prepareTexture: () => createBusinessCardTexture(about, () => document.createElement('canvas'), cardImages),
+      onPickup: (position) => paperAudio.play('page', position),
       onRead: onCard,
       onChange(state) {
         const wasReturning = host.dataset.paperState === 'returning';
@@ -220,7 +245,10 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         printerController.update(delta);
         const keysMoving = keyboardController.moving;
         keyboardController.update(delta);
-        if (keysMoving) renderer.shadowMap.needsUpdate = true;
+        const bookMoving = bookController.moving;
+        bookController.update(delta);
+        monitorInterference.update(delta);
+        if (keysMoving || bookMoving) renderer.shadowMap.needsUpdate = true;
         snow.update(delta);
         if (printerController.paperMoving) renderer.shadowMap.needsUpdate = true;
       },
@@ -230,7 +258,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       },
     });
     function enter(nextTarget) {
-      if (!visible || contextLost || focus.state !== 'room') return false;
+      if (!visible || contextLost || bookDialog.open || focus.state !== 'room') return false;
+      cancelBookEvent();
       controls.stop();
       target = nextTarget;
       if (target === 'radio') {
@@ -247,13 +276,13 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       if (visible && !contextLost && target === 'printer' && focus.state === 'focused') printerController.print();
     }
     function pressKeyboard() {
-      if (!visible || contextLost || document.hidden || focus.state !== 'room') return;
+      if (!visible || contextLost || document.hidden || bookDialog.open || focus.state !== 'room') return;
       keyboardController.press();
       renderer.shadowMap.needsUpdate = true;
       requestDraw();
     }
     function openSheet(callback = onCard) {
-      if (!visible || contextLost || !printerController.printed) return false;
+      if (!visible || contextLost || bookDialog.open || !printerController.printed) return false;
       if (focus.state !== 'focused' || target !== 'printer') {
         if (focus.state !== 'room') { focus.leave(); focus.finish(); }
         target = 'printer'; focus.enter(); focus.finish();
@@ -265,7 +294,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     leaveButton.addEventListener('click', leave, options);
     leaveRadioButton.addEventListener('click', leave, options);
     document.addEventListener('keydown', (event) => {
-      if (!visible || contextLost || event.target === soundSlider || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      if (!visible || contextLost || bookDialog.open || event.target === soundSlider || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
       if (visible && !contextLost && focus.state !== 'room' && ['Escape', 'Home'].includes(event.key)) {
         event.preventDefault(); leave();
       } else if (event.target === host && focus.state === 'room' && ['KeyP', 'KeyM', 'KeyR'].includes(event.code)) {
@@ -294,7 +323,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     }
     host.addEventListener('pointerdown', (event) => {
       const touchText = event.pointerType !== 'mouse' && event.target.closest('.monitor-text-layer');
-      if (!visible || contextLost || focus.moving || event.button !== 0 || (event.target.tagName !== 'CANVAS' && !touchText)) return;
+      if (!visible || contextLost || bookDialog.open || focus.moving || event.button !== 0 || (event.target.tagName !== 'CANVAS' && !touchText)) return;
       pointerDown = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false,
         state: focus.state, textLink: touchText && event.target.closest('a') };
       if (focus.state === 'focused' && !touchText) {
@@ -309,7 +338,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     host.addEventListener('pointerup', (event) => {
       const down = pointerDown; pointerDown = undefined;
       if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
-      if (!visible || contextLost || !down || down.id !== event.pointerId || down.moved) return;
+      if (!visible || contextLost || bookDialog.open || !down || down.id !== event.pointerId || down.moved) return;
       if (focus.moving || down.state !== focus.state || down.textLink) return;
       const hit = sceneHit(event);
       const hitTarget = hitBelongsTo(hit, radio) ? 'radio'
@@ -317,7 +346,12 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
           : hitBelongsTo(hit, screens.primary.parent) ? 'monitor' : undefined;
       if (focus.state === 'room') {
         if (hitBelongsTo(hit, keyboard)) pressKeyboard();
-        else if (hitTarget) enter(hitTarget);
+        else if (hitBelongsTo(hit, book)) {
+          if (bookController.press()) {
+            paperAudio.play('page', book.getWorldPosition(new THREE.Vector3()));
+            requestDraw();
+          }
+        } else if (hitTarget) enter(hitTarget);
       } else if (focus.state === 'focused' && hitTarget !== target) leave();
       else if (target === 'radio' && focus.state === 'focused') {
         if (radioFrontHit(radio, hit)) radioController.next();
@@ -381,11 +415,12 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     }
     window.addEventListener('resize', resize, options);
     document.addEventListener('visibilitychange', syncAnimation, options);
-    window.addEventListener('pagehide', () => audio.setActive(false), options);
+    window.addEventListener('pagehide', () => { audio.setActive(false); bookDialog.setActive(false); }, options);
     window.addEventListener('pageshow', syncAnimation, options);
     reducedMotion.addEventListener('change', () => {
       if (reducedMotion.matches) {
         focus.finish(); printerController.finish(); keyboardController.finish();
+        bookController.finish(); monitorInterference.clear(); bookDialog.finishTyping();
         renderer.shadowMap.needsUpdate = true;
       }
       syncAnimation();
@@ -404,6 +439,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       activateAudio,
       setVisible(value) {
         visible = value;
+        if (!value) cancelBookEvent();
         if (value) { resize(); draw(); }
         syncInput(); syncAnimation();
       },
@@ -412,4 +448,10 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       dispose,
     };
   } catch (error) { dispose(); throw error; }
+
+  function cancelBookEvent() {
+    bookController?.cancel(); monitorInterference?.clear();
+    bookDialog?.close({ restoreFocus: false });
+    if (renderer) renderer.shadowMap.needsUpdate = true;
+  }
 }

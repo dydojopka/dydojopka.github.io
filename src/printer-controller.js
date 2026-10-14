@@ -7,7 +7,7 @@ export const PRINT_DURATIONS = { feeding: 2.4, printing: 1.2, ejecting: 3.6 };
 const smooth = (value) => value * value * (3 - 2 * value);
 const OUTPUT = { position: new Vector3().fromArray(OUTPUT_POSITION), quaternion: new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2) };
 
-export function createPrinterController({ printer, scene, camera, reducedMotion, prepareTexture, onChange = () => {}, onRead = () => {} }) {
+export function createPrinterController({ printer, scene, camera, reducedMotion, prepareTexture, onChange = () => {}, onRead = () => {}, onPickup = () => {} }) {
   const sheet = printer.getObjectByName('input-sheet-3');
   const hopper = sheet.parent;
   const inputPosition = sheet.position.clone();
@@ -190,7 +190,9 @@ export function createPrinterController({ printer, scene, camera, reducedMotion,
       printer.updateWorldMatrix(true, true);
       scene.attach(sheet);
       paper = 'lifting'; elapsed = 0; readCallback = callback;
-      applyLift(0); changed();
+      applyLift(0);
+      onPickup(sheet.getWorldPosition(new Vector3()));
+      changed();
       if (reducedMotion.matches) finishPaper();
       return true;
     },

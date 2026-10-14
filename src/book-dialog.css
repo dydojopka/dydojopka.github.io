@@ -1,0 +1,68 @@
+@font-face {
+  font-family: 'Signalis Dialogue';
+  src: url('/fonts/signalis-dialogue.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+.book-dialog {
+  box-sizing: border-box;
+  position: fixed;
+  inset: auto 0 max(16px, env(safe-area-inset-bottom));
+  width: min(calc(100% - 32px), 1400px);
+  max-width: none;
+  min-height: 200px;
+  max-height: calc(100dvh - 32px);
+  margin: 0 auto;
+  padding: 22px 34px 54px;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: #090909;
+  color: #d4d4cf;
+  font-family: 'Signalis Dialogue', monospace;
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0;
+  text-shadow: 0 0 2px #d4d4cf33;
+  outline: none;
+  touch-action: none;
+}
+.book-dialog::backdrop { background: transparent; }
+.book-dialog::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(#c3c3bd, #c3c3bd) top / 100% 2px no-repeat,
+    linear-gradient(#c3c3bd, #c3c3bd) bottom / 100% 2px no-repeat,
+    linear-gradient(#c3c3bd, #c3c3bd) left top / 2px 24px no-repeat,
+    linear-gradient(#c3c3bd, #c3c3bd) right top / 2px 24px no-repeat,
+    linear-gradient(#c3c3bd, #c3c3bd) left bottom / 2px 24px no-repeat,
+    linear-gradient(#c3c3bd, #c3c3bd) right bottom / 2px 24px no-repeat;
+}
+.book-dialog-line { margin: 0; white-space: pre-wrap; overflow-wrap: break-word; }
+.book-dialog-remainder { visibility: hidden; }
+.book-dialog-arrow {
+  position: absolute;
+  bottom: 25px;
+  left: calc(50% - 16px);
+  width: 32px;
+  height: 8px;
+  background: #bcbcb7;
+  clip-path: polygon(0 0, 12.5% 0, 12.5% 25%, 25% 25%, 25% 50%, 37.5% 50%, 37.5% 75%, 62.5% 75%, 62.5% 50%, 75% 50%, 75% 25%, 87.5% 25%, 87.5% 0, 100% 0, 100% 25%, 87.5% 25%, 87.5% 50%, 75% 50%, 75% 75%, 62.5% 75%, 62.5% 100%, 37.5% 100%, 37.5% 75%, 25% 75%, 25% 50%, 12.5% 50%, 12.5% 25%, 0 25%);
+}
+@media (max-width: 600px) {
+  .book-dialog {
+    inset-block-end: max(12px, env(safe-area-inset-bottom));
+    width: calc(100% - 24px);
+    min-height: 190px;
+    padding: 18px 20px 48px;
+    font-size: 32px;
+    line-height: 1.25;
+  }
+  .book-dialog-arrow { bottom: 21px; }
+}
