@@ -1,3 +1,5 @@
+import { createLoadingScreen } from './loading-screen.js';
+
 const HISTORY_KEY = 'workstationCard';
 const FALLBACK_NOTICE = 'У сайта есть интерактивная 3D-сцена. Сейчас она недоступна — показана текстовая визитка.';
 
@@ -8,7 +10,7 @@ export function modeUrl(href, card) {
   return url.href;
 }
 
-export function createCardMode({ window, document, loadRuntime }) {
+export function createCardMode({ window, document, loadRuntime, onModeChange = () => {} }) {
   const room = document.querySelector('#room');
   const card = document.querySelector('#card');
   const notice = document.querySelector('#card-notice');
@@ -27,6 +29,18 @@ export function createCardMode({ window, document, loadRuntime }) {
   let scroll = 0;
   let destroyed = false;
   let manualTheme;
+  let enteredScene = false;
+  let admission;
+  const loading = createLoadingScreen({
+    window,
+    document,
+    onEnter() {
+      if (!admission || admission.request !== revision || availability !== 'ready') return;
+      const { value, options } = admission;
+      admission = undefined;
+      enterScene(value, { ...options, activateAudio: true });
+    },
+  });
   const owner = `${Date.now()}-${Math.random()}`;
   const ownEntry = () => window.history.state?.[HISTORY_KEY]?.owner === owner;
 
@@ -39,9 +53,15 @@ export function createCardMode({ window, document, loadRuntime }) {
   }
   function presentLoading() {
     mode = 'loading';
+    runtime?.setVisible(false);
     room.hidden = room.inert = card.hidden = card.inert = true;
-    loader.hidden = false;
+    loader.hidden = loader.inert = false;
     document.documentElement.dataset.mode = 'loading';
+    onModeChange(mode);
+    loading.setReady(false);
+    loading.setVisible(true);
+    window.scrollTo(0, 0);
+    loader.focus({ preventScroll: true });
   }
 
   function service() {
@@ -58,19 +78,24 @@ export function createCardMode({ window, document, loadRuntime }) {
   function presentCard(nextReason, record = false) {
     if (destroyed) return;
     revision++;
+    admission = undefined;
+    loading.setVisible(false);
+    loading.setReady(false);
     if (mode !== 'card' || reason !== nextReason) manualTheme = undefined;
     reason = nextReason;
     if (record) window.history.pushState({ ...window.history.state, [HISTORY_KEY]: { owner, reason } }, '', modeUrl(window.location.href, true));
     const wasScene = mode === 'scene';
+    const focusedLoader = loader.contains(document.activeElement);
     mode = 'card';
-    loader.hidden = true;
+    loader.hidden = loader.inert = true;
     runtime?.setVisible(false);
     room.hidden = room.inert = true;
     card.hidden = card.inert = false;
     document.documentElement.dataset.mode = 'card';
+    onModeChange(mode);
     theme();
     service();
-    if (wasScene) {
+    if (wasScene || focusedLoader) {
       title.focus({ preventScroll: true });
       window.scrollTo(0, scroll);
     }
@@ -79,7 +104,9 @@ export function createCardMode({ window, document, loadRuntime }) {
     if (runtime) return runtime;
     if (!pending) {
       availability = 'loading';
+      loading.reset();
       pending = Promise.resolve().then(() => loadRuntime({
+        onProgress: (stage) => loading.stage(stage),
         onCard: () => presentCard('printer', true),
         onLost() { availability = 'lost'; presentCard('fallback'); },
         onReady() { availability = 'ready'; service(); },
@@ -101,24 +128,44 @@ export function createCardMode({ window, document, loadRuntime }) {
     }
     return pending;
   }
-  async function activateScene({ replace = false, replay = false } = {}) {
-    if (availability === 'lost' || destroyed) return;
-    const request = ++revision;
+  function enterScene(value, { replace = false, replay = false, activateAudio = false } = {}) {
     try {
-      const value = await acquire();
-      if (request !== revision || destroyed) return;
       if (replace) window.history.replaceState({ ...window.history.state, [HISTORY_KEY]: undefined }, '', modeUrl(window.location.href, false));
       if (mode === 'card') scroll = window.scrollY;
+      enteredScene = true;
       mode = 'scene';
-      loader.hidden = true;
+      loading.setVisible(false);
+      loader.hidden = loader.inert = true;
       card.hidden = card.inert = true;
       room.hidden = room.inert = false;
       document.documentElement.dataset.mode = 'scene';
+      onModeChange(mode);
       window.scrollTo(0, 0);
       value.setVisible(true);
+      if (activateAudio) value.activateAudio();
       room.focus({ preventScroll: true });
       if (replay && value.printed) value.openSheet(() => presentCard('printer'));
       else value.returnSheet();
+    } catch (error) {
+      availability = 'failed';
+      presentCard('fallback');
+      console.error('Не удалось открыть 3D-сцену.', error);
+    }
+  }
+  async function activateScene({ replace = false, replay = false } = {}) {
+    if (availability === 'lost' || destroyed) return;
+    const request = ++revision;
+    if (mode === 'card') scroll = window.scrollY;
+    if (!runtime || !enteredScene) presentLoading();
+    try {
+      const value = await acquire();
+      if (request !== revision || destroyed) return;
+      if (!enteredScene) {
+        admission = { request, value, options: { replace, replay } };
+        loading.setReady(true);
+        return;
+      }
+      enterScene(value, { replace, replay });
     } catch (error) {
       if (request !== revision || destroyed) return;
       presentCard('fallback');
@@ -156,11 +203,8 @@ export function createCardMode({ window, document, loadRuntime }) {
     get availability() { return availability; },
     start() {
       if (new URL(window.location.href).searchParams.get('view') === 'card') presentCard('direct');
-      else {
-        if (mode === 'loading') presentLoading();
-        return activateScene();
-      }
+      else return activateScene();
     },
-    dispose() { destroyed = true; revision++; events.abort(); runtime?.dispose(); },
+    dispose() { destroyed = true; revision++; admission = undefined; events.abort(); loading.dispose(); runtime?.dispose(); },
   };
 }

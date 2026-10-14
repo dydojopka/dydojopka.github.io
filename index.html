@@ -16,11 +16,34 @@
       }, true);
     </script>
     <link rel="stylesheet" href="/src/business-card.css" />
+    <link rel="stylesheet" href="/src/loading-screen.css" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23101815'/%3E%3Crect x='10' y='12' width='44' height='34' rx='3' fill='%236b8873'/%3E%3Crect x='15' y='17' width='34' height='23' rx='3' fill='%23283f32'/%3E%3Cpath d='M23 52h18' stroke='%236b8873' stroke-width='5'/%3E%3C/svg%3E" />
   </head>
   <body>
-    <div id="scene-loading" role="status" aria-live="polite">Загрузка рабочего стола…</div>
-    <section id="room" hidden inert tabindex="0" aria-describedby="view-help" aria-label="Трёхмерная сцена: рабочий стол с ЭЛТ-монитором, клавиатурой, принтером, растением и лампой в ночной комнате. За окном сильная метель.">
+    <section id="scene-loading" class="boot-screen" tabindex="-1" aria-labelledby="loading-title" data-state="loading">
+      <header class="boot-header">
+        <h1 id="loading-title">WT KERNEL / PERSONAL WORKSTATION</h1>
+        <p>Терминал личного профиля: Евгений Ашроев</p>
+        <p>Устройство ввода: клавиатура / мышь / касание</p>
+      </header>
+      <ol class="boot-log" aria-label="Подготовка системы">
+        <li data-boot-line data-stage="modules" data-state="active"><span>Загрузка модулей интерфейса</span><span class="boot-result">[ … ]</span></li>
+        <li data-boot-line data-stage="graphics" data-state="pending" hidden><span>Инициализация графического устройства</span><span class="boot-result">[ — ]</span></li>
+        <li data-boot-line data-stage="environment" data-state="pending" hidden><span>Загрузка геометрии, текстур и окружения</span><span class="boot-result">[ — ]</span></li>
+        <li data-boot-line data-stage="card" data-state="pending" hidden><span>Чтение профиля и каталога проектов</span><span class="boot-result">[ — ]</span></li>
+        <li data-boot-line data-stage="shaders" data-state="pending" hidden><span>Подготовка графической среды</span><span class="boot-result">[ — ]</span></li>
+      </ol>
+      <progress id="loading-progress" class="boot-access" value="0" max="5" aria-label="Подготовленные этапы загрузки"></progress>
+      <section class="boot-legal" aria-labelledby="loading-legal-title">
+        <h2 id="loading-legal-title" data-boot-line hidden>Чтение правового уведомления:</h2>
+        <!-- BOOT_DISCLAIMER -->
+      </section>
+      <footer class="boot-footer">
+        <p id="loading-status" role="status" aria-live="polite" aria-atomic="true">Загрузка модулей интерфейса…</p>
+        <button id="loading-continue" type="button" disabled hidden><span aria-hidden="true">&gt; </span><span id="loading-prompt">Ожидание готовности системы</span></button>
+      </footer>
+    </section>
+    <section id="room" hidden inert tabindex="0" aria-describedby="view-help" aria-label="Трёхмерная сцена: рабочий стол с ЭЛТ-монитором, клавиатурой, принтером, радиоприёмником, растением и лампой в ночной комнате. За окном сильная метель.">
       <label id="scene-sound-control" class="scene-sound" hidden data-muted="false" title="Громкость звука" style="--sound-level: 50%">
         <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square" stroke-linejoin="miter">
           <path d="M3 8h3l4-3v10l-4-3H3Z" />
@@ -32,6 +55,7 @@
       <div class="view-controls" hidden>
         <p id="view-help"></p>
       </div>
+      <p id="radio-status" class="screen-access" role="status" aria-live="polite" aria-atomic="true"></p>
       <div class="monitor-controls" hidden>
         <p>Прокрутка — колесо / свайп · Назад — Esc / Home</p>
         <button id="leave-monitor" class="mobile-return" type="button">К столу</button>
@@ -55,9 +79,26 @@
             <path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5a8.5 8.5 0 1 0 10.8 10.8Z" />
           </svg>
         </button>
+        <a id="card-download" href="__BUSINESS_CARD_PDF__" download="evgeny-ashroev-business-card.pdf" aria-label="Скачать визитку в PDF" title="Скачать визитку в PDF">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />
+          </svg>
+        </a>
       </div>
       <!-- BUSINESS_CARD -->
     </main>
+    <footer class="site-legal">
+      <a id="license-trigger" href="#license-disclaimer" aria-label="Лицензия и дисклеймер">© Лицензия</a>
+      <dialog id="license-disclaimer" open aria-labelledby="license-title">
+        <header class="license-header">
+          <h2 id="license-title">Лицензия и дисклеймер</h2>
+          <form id="license-close" method="dialog" hidden>
+            <button type="submit" autofocus>Закрыть</button>
+          </form>
+        </header>
+        <!-- LICENSE_DISCLAIMER -->
+      </dialog>
+    </footer>
     <script type="module" src="/src/bootstrap.js"></script>
   </body>
 </html>

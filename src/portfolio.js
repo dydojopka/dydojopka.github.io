@@ -30,11 +30,10 @@ export function createPortfolio({ host }) {
   let regions = [];
   let highlighted = '';
   let notify = () => {};
-  let enter = () => {};
   let leave = () => {};
   let screen;
   let camera;
-  let scene;
+  let getHit = () => {};
   let pointerDown;
   let imageRevision = 0;
   const images = new Map();
@@ -59,8 +58,6 @@ export function createPortfolio({ host }) {
   notice.hidden = true;
   document.body.append(notice);
   let noticeTimer;
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
   const portrait = new Image();
   portrait.src = `${import.meta.env.BASE_URL}${profile.photo.replace(/^\//, '')}`;
   listen(portrait, 'load', paint);
@@ -170,16 +167,8 @@ export function createPortfolio({ host }) {
 
   function hit(event) {
     if (!screen || !camera || !enabled) return undefined;
-    const rect = host.getBoundingClientRect();
-    pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2);
-    camera.updateMatrixWorld();
-    raycaster.setFromCamera(pointer, camera);
-    const nearest = raycaster.intersectObject(scene, true).find((hit) => hit.object.visible);
-    if (!nearest) return undefined;
-    if (focused) return nearest.object === screen ? nearest : undefined;
-    let object = nearest.object;
-    while (object && object !== screen.parent) object = object.parent;
-    return object ? nearest : undefined;
+    const nearest = getHit(event);
+    return nearest?.object === screen ? nearest : undefined;
   }
   async function copyContact(href) {
     const copied = await copyEmail(href);
@@ -232,18 +221,8 @@ export function createPortfolio({ host }) {
     }
   });
   listen(host, 'pointercancel', () => { pointerDown = undefined; });
-  listen(host, 'pointerup', (event) => {
-    const down = pointerDown;
+  listen(host, 'pointerup', () => {
     pointerDown = undefined;
-    if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
-    if (!down || Math.hypot(event.clientX - down.x, event.clientY - down.y) > 8) return;
-    const intersection = hit(event);
-    if (!intersection) return;
-    if (!focused) {
-      enter();
-      return;
-    }
-    perform(screenAction(intersection.uv, regions, focused));
   });
   listen(host, 'wheel', (event) => {
     if (!focused) return;
@@ -256,7 +235,10 @@ export function createPortfolio({ host }) {
   paint();
   return {
     texture,
-    attach(options) { ({ screen, camera, scene, onChange: notify, onEnter: enter, onLeave: leave } = options); },
+    attach(options) { ({ screen, camera, getHit, onChange: notify, onLeave: leave } = options); },
+    click(intersection) {
+      if (enabled && focused && intersection?.object === screen) perform(screenAction(intersection.uv, regions, focused));
+    },
     setEnabled(value) {
       enabled = value;
       pointerDown = undefined;

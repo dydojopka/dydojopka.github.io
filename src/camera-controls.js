@@ -69,6 +69,7 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
   const help = host.querySelector('#view-help');
   let profile;
   let enabled = true;
+  let helpTarget = 'room';
   let drag;
 
   function apply() {
@@ -99,8 +100,11 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
     change(0, profile.initialPitch);
   }
   function updateHelp() {
-    help.textContent = coarsePointer.matches ? 'Осмотр — свайп · Выбор — нажатие'
-        : 'Осмотр — курсор / ↑←↓→ / WASD · Выбор — клик / P / M · Сброс — Home';
+    help.textContent = helpTarget === 'radio'
+      ? coarsePointer.matches ? 'Станция — нажатие'
+        : 'Станция — клик / Enter · К столу — Esc / Home'
+      : coarsePointer.matches ? 'Осмотр — свайп · Выбор — нажатие'
+        : 'Осмотр — курсор / ↑←↓→ / WASD · Выбор — клик / P / M / R · Сброс — Home';
   }
 
   host.addEventListener('pointerdown', (event) => {
@@ -173,9 +177,13 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
       if (changed) apply();
       return changed;
     },
-    setEnabled(value) {
+    setEnabled(value, nextHelpTarget = 'room') {
       enabled = value;
-      controls.hidden = !value;
+      if (helpTarget !== nextHelpTarget) {
+        helpTarget = nextHelpTarget;
+        updateHelp();
+      }
+      controls.hidden = !value && helpTarget !== 'radio';
       stop();
     },
     stop,
