@@ -23,6 +23,8 @@ import { createRadioAudio } from './radio-audio.js';
 import { createRadioDisplay, loadRadioAtlas } from './radio-display.js';
 import { radioView, radioFrontHit, radioEmitter } from './radio-focus.js';
 import { hitBelongsTo, nearestVisibleHit } from './scene-hit.js';
+import { createKeyboardController } from './keyboard-controller.js';
+import { createKeyboardAudio } from './keyboard-audio.js';
 import './style.css';
 
 export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, onProgress = () => {} }) {
@@ -31,7 +33,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   const options = { signal: events.signal };
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let renderer, portfolio, scene, postProcessing, controls, cursor, display, printerController, renderLoop;
-  let radioDisplay;
+  let radioDisplay, keyboardController;
   let visible = false;
   let contextLost = false;
   let disposed = false;
@@ -67,6 +69,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   });
   const radioAudio = createRadioAudio({ controller: radioController, baseUrl: import.meta.env.BASE_URL });
   audio.addStream(radioAudio);
+  const keyboardAudio = createKeyboardAudio({ baseUrl: import.meta.env.BASE_URL });
+  audio.addStream(keyboardAudio);
   syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
   soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
   function activateAudio(event = {}) {
@@ -104,6 +108,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     controls?.dispose(); cursor?.dispose();
     portfolio?.dispose(); display?.dispose(); printerController?.dispose();
     radioDisplay?.dispose();
+    keyboardController?.dispose();
     postProcessing?.dispose();
     if (scene) disposeScene(scene);
     renderer?.dispose(); renderer?.domElement.remove();
@@ -156,6 +161,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     ({ scene } = room);
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время загрузки сцены.');
     const { snow, screens, printer } = room;
+    const keyboard = scene.getObjectByName('keyboard');
+    keyboardController = createKeyboardController({ keyboard, reducedMotion, onPress: (sound, position) => keyboardAudio.play(sound, position) });
     const radio = scene.getObjectByName('radio-stack');
     radioDisplay = createRadioDisplay({ radio, atlas: radioAtlas, onChange: requestDraw });
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 70);
@@ -211,6 +218,9 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         focus.update(delta);
         controls.update(delta);
         printerController.update(delta);
+        const keysMoving = keyboardController.moving;
+        keyboardController.update(delta);
+        if (keysMoving) renderer.shadowMap.needsUpdate = true;
         snow.update(delta);
         if (printerController.paperMoving) renderer.shadowMap.needsUpdate = true;
       },
@@ -235,6 +245,12 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     }
     function print() {
       if (visible && !contextLost && target === 'printer' && focus.state === 'focused') printerController.print();
+    }
+    function pressKeyboard() {
+      if (!visible || contextLost || document.hidden || focus.state !== 'room') return;
+      keyboardController.press();
+      renderer.shadowMap.needsUpdate = true;
+      requestDraw();
     }
     function openSheet(callback = onCard) {
       if (!visible || contextLost || !printerController.printed) return false;
@@ -300,7 +316,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         : hitBelongsTo(hit, printer) || hitBelongsTo(hit, printerController.sheet) ? 'printer'
           : hitBelongsTo(hit, screens.primary.parent) ? 'monitor' : undefined;
       if (focus.state === 'room') {
-        if (hitTarget) enter(hitTarget);
+        if (hitBelongsTo(hit, keyboard)) pressKeyboard();
+        else if (hitTarget) enter(hitTarget);
       } else if (focus.state === 'focused' && hitTarget !== target) leave();
       else if (target === 'radio' && focus.state === 'focused') {
         if (radioFrontHit(radio, hit)) radioController.next();
@@ -367,7 +384,10 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     window.addEventListener('pagehide', () => audio.setActive(false), options);
     window.addEventListener('pageshow', syncAnimation, options);
     reducedMotion.addEventListener('change', () => {
-      if (reducedMotion.matches) { focus.finish(); printerController.finish(); }
+      if (reducedMotion.matches) {
+        focus.finish(); printerController.finish(); keyboardController.finish();
+        renderer.shadowMap.needsUpdate = true;
+      }
       syncAnimation();
     }, options);
     host.dataset.focusTarget = host.dataset.focusState = host.dataset.monitorState = 'room';
