@@ -43,6 +43,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   const monitorControls = host.querySelector('.monitor-controls');
   const printerControls = host.querySelector('.printer-controls');
   const leaveButton = host.querySelector('#leave-printer');
+  const leaveRadioButton = host.querySelector('#leave-radio');
   const status = host.querySelector('#printer-status');
   const radioStatus = host.querySelector('#radio-status');
   const soundControl = host.querySelector('#scene-sound-control');
@@ -81,11 +82,12 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     soundControl.hidden = !active;
     const roomActive = active && focus?.state === 'room';
     controls?.setEnabled(roomActive, active && target === 'radio' ? 'radio' : 'room');
-    cursor?.setEnabled(roomActive);
+    cursor?.setEnabled(active && target !== 'monitor');
     portfolio?.setEnabled(active && ['room', 'monitor'].includes(target));
     portfolio?.setFocused(active && target === 'monitor' && focus.state === 'focused');
     monitorControls.hidden = !active || target !== 'monitor' || focus.state === 'room';
     printerControls.hidden = !active || target !== 'printer' || focus.state === 'room';
+    leaveRadioButton.hidden = !active || target !== 'radio' || focus.state === 'room';
     leaveButton.disabled = ['lifting', 'returning'].includes(printerController?.paper);
   }
   function syncAnimation() {
@@ -245,6 +247,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     const workstation = scene.getObjectByName('workstation');
     portfolio.attach({ screen: screens.primary, camera, getHit: sceneHit, onChange: requestDraw, onLeave: leave });
     leaveButton.addEventListener('click', leave, options);
+    leaveRadioButton.addEventListener('click', leave, options);
     document.addEventListener('keydown', (event) => {
       if (!visible || contextLost || event.target === soundSlider || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
       if (visible && !contextLost && focus.state !== 'room' && ['Escape', 'Home'].includes(event.key)) {
