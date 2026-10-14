@@ -1,4 +1,4 @@
-# Dydojopka' business card
+# Dydojopka's business card
 
 Доступ по ссылке: [dydojopka.github.io](https://dydojopka.github.io/)
 
