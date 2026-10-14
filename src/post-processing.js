@@ -53,6 +53,12 @@ export function createPostProcessing(renderer) {
     setFrameHeight(height) {
       material.uniforms.frameHeight.value = height;
     },
+    lose() {
+      // Release the old context's handles while it is lost. After restoration
+      // Three.js replaces its resource registry; old disposal listeners would
+      // otherwise try to delete handles belonging to the previous context.
+      target.dispose();
+    },
     draw(room, viewCamera) {
       renderer.setRenderTarget(target);
       renderer.render(room, viewCamera);
