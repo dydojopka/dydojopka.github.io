@@ -16,6 +16,9 @@ rose-engine and/or their respective rights holders:
 - Audio: SIGNALIS-derived recordings in `public/audio/`.
 - Textures: SIGNALIS-derived textures embedded in the models and used
   in scene images, including `public/images/radio-frequencies.png`.
+- Font: `public/fonts/signalis-dialogue.woff2`, adapted from the game's
+  `SignalisDialogue_rasterHinted16pt` glyph atlas. The web font preserves its
+  Latin and Cyrillic pixel shapes and spacing; it remains a third-party asset.
 
 These assets are excluded from the code license. Modification of an asset
 does not transfer ownership. They are used here for non-commercial fan
