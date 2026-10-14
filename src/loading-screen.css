@@ -1,0 +1,28 @@
+html[data-mode='loading'] { min-height: 100%; background: #030404; color-scheme: dark; }
+html[data-mode='loading'] .site-legal { display: none; }
+html[data-mode='loading'] #scene-loading { display: block; }
+.boot-screen { position: relative; isolation: isolate; min-height: 100dvh; padding: clamp(24px, 3.5vw, 56px); background: #030404; color: #9ba39d; font: 14px/1.45 ui-monospace, 'Cascadia Mono', Consolas, monospace; overflow-wrap: anywhere; outline: none; }
+.boot-screen::before { content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #0000 0 2px, #0003 2px 3px); }
+.boot-header, .boot-log, .boot-legal, .boot-footer { max-width: 118ch; }
+.boot-header { margin-bottom: 24px; }
+.boot-header h1, .boot-header p { margin: 0; font: inherit; }
+.boot-header h1 { color: #bbc2bc; letter-spacing: 0.04em; }
+.boot-log { margin: 0 0 24px; padding: 0; list-style: none; }
+.boot-log li { display: flex; align-items: baseline; gap: 16px; }
+.boot-log li > span:first-child::after { content: '…'; }
+.boot-result { flex: none; white-space: pre; color: #bbc2bc; }
+.boot-log li[data-state='active'] .boot-result { color: #cb8c81; }
+.boot-legal h2 { margin: 0 0 8px; color: #bbc2bc; font: inherit; }
+.boot-legal p { margin: 0 0 6px; }
+.boot-legal p:last-child { margin-bottom: 0; }
+.boot-screen a { color: #aeb9ad; text-underline-offset: 3px; }
+.boot-screen a:hover { color: #e2e8df; }
+.boot-footer { margin-top: 24px; }
+#loading-status { margin: 0; }
+#loading-continue { display: block; max-width: 100%; min-height: 44px; margin: 0; padding: 8px 0; border: 0; border-radius: 0; background: transparent; color: #c4cec1; font: inherit; text-align: left; cursor: pointer; }
+.boot-screen :focus-visible { outline: 1px dashed #c5d0c6; outline-offset: 4px; }
+.boot-access { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 600px) {
+  .boot-screen { padding: 24px max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+  .boot-log li { gap: 10px; }
+}
