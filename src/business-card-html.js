@@ -50,15 +50,3 @@ export function businessCardHtml({ about, projects }, base = '/') {
     </section>`).join('\n')}</section>
   </article>`;
 }
-
-export function businessCardSummary(about) {
-  const text = (block) => block.runs.filter((run) => run.type !== 'image').map((run) => run.text).join('').replace(/^•\s*/, '');
-  const stackIndex = about.blocks.findIndex((block) => block.type === 'heading' && /^стек$/i.test(text(block).trim()));
-  const stack = [];
-  for (let i = stackIndex + 1; stackIndex >= 0 && i < about.blocks.length; i++) {
-    if (about.blocks[i].type === 'heading') break;
-    if (text(about.blocks[i])) stack.push(text(about.blocks[i]));
-  }
-  return { name: about.title, description: text(about.blocks.find((block) => block.type === 'paragraph') ?? { runs: [] }),
-    stack, contacts: about.contacts };
-}

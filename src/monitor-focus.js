@@ -1,6 +1,5 @@
 import { Box3, Matrix4, Quaternion, Vector3 } from 'three';
 import { screenCenter, screenNormal } from './screen.js';
-import { createFocusTransition } from './focus-transition.js';
 
 export function monitorView(screen, aspect, fill = 0.9) {
   const center = screenCenter(screen);
@@ -20,8 +19,4 @@ export function monitorView(screen, aspect, fill = 0.9) {
   const position = center.clone().addScaledVector(normal, distance);
   const quaternion = new Quaternion().setFromRotationMatrix(new Matrix4().lookAt(position, center, vertical));
   return { position, quaternion, fov, aspect };
-}
-
-export function createMonitorFocus(options) {
-  return createFocusTransition({ ...options, view: (aspect) => monitorView(options.screen, aspect) });
 }
