@@ -29,6 +29,7 @@ export function createSceneAudio({
   const pending = new Map();
   const playing = new Map();
   const emitters = new Map();
+  const streams = new Set();
   const listenerPose = { position: { x: 0, y: 0, z: 0 }, forward: { x: 0, y: 0, z: -1 }, up: { x: 0, y: 1, z: 0 } };
   let context;
   let master;
@@ -53,6 +54,7 @@ export function createSceneAudio({
   }
   function suspend() {
     // Suspending the audio clock preserves loop positions and filter state.
+    for (const stream of streams) stream.setActive(false);
     if (context && context.state !== 'closed') context.suspend().catch(() => {});
   }
   function failed(error) {
@@ -126,9 +128,13 @@ export function createSceneAudio({
     playing.set(name, { source, gain, panner, filter });
     source.start();
   }
-  function sync() {
+  function sync(gesture = false) {
     if (!printing) stop('printer');
     if (!audible()) { suspend(); return; }
+    for (const stream of streams) {
+      stream.setActive(true);
+      if (gesture) stream.activate();
+    }
     // resume() runs from a scene gesture, before fetching or decoding audio.
     context.resume().then(() => {
       if (!audible()) { suspend(); return; }
@@ -145,16 +151,27 @@ export function createSceneAudio({
         master.gain.setValueAtTime(0, context.currentTime);
         master.connect(context.destination);
         placeListener();
+        for (const stream of streams) stream.connect({ context, output: master });
+        context.addEventListener?.('statechange', () => {
+          if (context.state === 'interrupted') for (const stream of streams) stream.setActive(false);
+        });
       }
       if (master) master.gain.setTargetAtTime(volume, context.currentTime, 0.02);
-      sync();
+      sync(true);
     } catch (error) { failed(error); }
   }
 
   return {
     get enabled() { return volume > 0; },
     get volume() { return volume; },
+    get currentTime() { return context?.currentTime ?? 0; },
     activate,
+    addStream(stream) {
+      if (disposed) { stream.dispose(); return; }
+      streams.add(stream);
+      if (context) stream.connect({ context, output: master });
+      stream.setActive(audible());
+    },
     setVolume(value) {
       if (disposed) return;
       const next = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
@@ -188,6 +205,8 @@ export function createSceneAudio({
       if (disposed) return;
       disposed = true;
       events.abort();
+      for (const stream of streams) stream.dispose();
+      streams.clear();
       for (const name of playing.keys()) stop(name);
       suspend();
       if (context) context.close().catch(() => {});
