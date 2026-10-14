@@ -2,6 +2,7 @@
   "name": "winter-terminal",
   "private": true,
   "version": "1.0.0",
+  "license": "CC-BY-NC-SA-4.0",
   "type": "module",
   "packageManager": "pnpm@11.25.0",
   "scripts": {
