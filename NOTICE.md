@@ -11,8 +11,8 @@ Third-party libraries retain their own licenses.
 The following assets derived from SIGNALIS remain the property of
 rose-engine and/or their respective rights holders:
 
-- 3D models, including modified versions: `public/models/workstation.glb`
-  and `public/models/exterior.glb`.
+- 3D models, including modified versions: `public/models/workstation.glb`,
+  `public/models/exterior.glb`, and `public/models/lily.glb`.
 - Audio: SIGNALIS-derived recordings in `public/audio/`.
 - Textures: SIGNALIS-derived textures embedded in the models and used
   in scene images, including `public/images/radio-frequencies.png`.
