@@ -84,6 +84,11 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   audio.addStream(keyboardAudio);
   const paperAudio = createSceneEffectsAudio({ baseUrl: import.meta.env.BASE_URL, sounds: { page: 'page-turn.mp3' } });
   audio.addStream(paperAudio);
+  const lampAudio = createSceneEffectsAudio({
+    baseUrl: import.meta.env.BASE_URL,
+    sounds: { click: 'lamp-switch.mp3' },
+  });
+  audio.addStream(lampAudio);
   syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
   soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
   function activateAudio(event = {}) {
@@ -185,6 +190,9 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     ({ scene } = room);
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время загрузки сцены.');
     const { snow, screens, printer, plant, plantParts, painting } = room;
+    const lamp = scene.getObjectByName('desk-lamp');
+    const lampLight = scene.getObjectByName('desk-lamp-light');
+    const lampIntensity = lampLight.intensity;
     const keyboard = scene.getObjectByName('keyboard');
     keyboardController = createKeyboardController({ keyboard, reducedMotion, onPress: (sound, position) => keyboardAudio.play(sound, position) });
     const book = scene.getObjectByName('book');
@@ -411,7 +419,12 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
           cancelBookEvent();
           paintingController.pickup();
         } else if (hitBelongsTo(hit, keyboard)) pressKeyboard();
-        else if (hitBelongsTo(hit, plant)) {
+        else if (hitBelongsTo(hit, lamp)) {
+          // Keep the light count stable to reuse the prepared shaders and shadows.
+          lampLight.intensity = lampLight.intensity ? 0 : lampIntensity;
+          lampAudio.play('click', lamp.getWorldPosition(new THREE.Vector3()));
+          requestDraw();
+        } else if (hitBelongsTo(hit, plant)) {
           if (plantController.press()) requestDraw();
         } else if (hitBelongsTo(hit, book)) {
           if (bookController.press()) {
