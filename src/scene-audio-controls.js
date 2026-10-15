@@ -17,10 +17,16 @@ export function saveSceneVolume(window, volume) {
   catch { /* Keep the current setting even when it cannot be persisted. */ }
 }
 
-export function syncSceneVolumeControl(slider, control, volume) {
+export function syncSceneVolumeControl(slider, control, volume, muteButton) {
   const percent = Math.round(volume * 100);
   slider.value = String(percent);
   slider.setAttribute('aria-valuetext', percent ? `${percent}%` : 'Звук выключен');
   control.dataset.muted = String(!percent);
   control.style.setProperty('--sound-level', `${percent}%`);
+  if (muteButton) {
+    const label = percent ? 'Выключить звук' : 'Включить звук';
+    muteButton.setAttribute('aria-label', label);
+    muteButton.setAttribute('aria-pressed', String(!percent));
+    muteButton.title = label;
+  }
 }

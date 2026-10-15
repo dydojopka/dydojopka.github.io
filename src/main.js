@@ -61,11 +61,12 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   const radioStatus = host.querySelector('#radio-status');
   const soundControl = host.querySelector('#scene-sound-control');
   const soundSlider = host.querySelector('#scene-sound');
+  const soundMuteButton = host.querySelector('#scene-sound-mute');
   const audio = createSceneAudio({
     baseUrl: import.meta.env.BASE_URL,
     initialVolume: readSceneVolume(window),
     onChange(volume) {
-      syncSceneVolumeControl(soundSlider, soundControl, volume);
+      syncSceneVolumeControl(soundSlider, soundControl, volume, soundMuteButton);
       saveSceneVolume(window, volume);
     },
   });
@@ -89,8 +90,9 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     sounds: { click: 'lamp-switch.mp3' },
   });
   audio.addStream(lampAudio);
-  syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
+  syncSceneVolumeControl(soundSlider, soundControl, audio.volume, soundMuteButton);
   soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
+  soundMuteButton.addEventListener('click', () => audio.toggleMute(), options);
   function activateAudio(event = {}) {
     if (visible && !contextLost && !event.altKey && !event.ctrlKey && !event.metaKey) audio.activate();
   }
@@ -100,7 +102,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   function requestDraw() { renderLoop?.requestDraw(); }
   function syncInput() {
     const active = visible && !contextLost && !disposed && !bookDialog?.open;
-    syncSceneVolumeControl(soundSlider, soundControl, audio.volume);
+    syncSceneVolumeControl(soundSlider, soundControl, audio.volume, soundMuteButton);
     soundControl.hidden = !active;
     const roomActive = active && focus?.state === 'room' && !paintingController?.active;
     controls?.setEnabled(roomActive, active && paintingController?.active ? 'painting'

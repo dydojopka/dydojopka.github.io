@@ -34,6 +34,7 @@ export function createSceneAudio({
   let context;
   let master;
   let volume = Number.isFinite(initialVolume) ? Math.max(0, Math.min(1, initialVolume)) : 0.5;
+  let previousVolume = volume || 0.5;
   let unlocked = false;
   let active = false;
   let printing = false;
@@ -161,6 +162,14 @@ export function createSceneAudio({
     } catch (error) { failed(error); }
   }
 
+  function setVolume(value) {
+    if (disposed) return;
+    const next = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+    if (next > 0) previousVolume = next;
+    if (next !== volume) { volume = next; onChange(volume); }
+    activate();
+  }
+
   return {
     get enabled() { return volume > 0; },
     get volume() { return volume; },
@@ -172,12 +181,8 @@ export function createSceneAudio({
       if (context) stream.connect({ context, output: master });
       stream.setActive(audible());
     },
-    setVolume(value) {
-      if (disposed) return;
-      const next = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
-      if (next !== volume) { volume = next; onChange(volume); }
-      activate();
-    },
+    setVolume,
+    toggleMute() { setVolume(volume > 0 ? 0 : previousVolume); },
     setSource(name, position, direction = { x: 0, y: 0, z: 1 }) {
       if (disposed || !SOUNDS[name]?.spatial) return;
       emitters.set(name, { position: { ...position }, direction: { ...direction } });

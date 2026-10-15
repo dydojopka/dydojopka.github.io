@@ -12,6 +12,7 @@ html[data-mode='scene'], html[data-mode='scene'] body { width: 100%; height: 100
 .printer-controls button:disabled { opacity: 0.45; cursor: default; }
 .scene-sound { --sound-level: 0%; position: absolute; top: max(10px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); z-index: 3; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; background: #10181599; color: #9aaba1; }
 .scene-sound svg { width: 18px; height: 18px; flex: none; }
+.scene-sound button { appearance: none; display: flex; align-items: center; justify-content: center; width: 18px; height: 44px; flex: none; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .scene-sound .sound-muted, .scene-sound[data-muted='true'] .sound-wave { display: none; }
 .scene-sound[data-muted='true'] .sound-muted { display: block; }
 .scene-sound input { appearance: none; width: 82px; height: 44px; padding: 0; margin: 0; background: transparent; cursor: pointer; }
@@ -20,7 +21,7 @@ html[data-mode='scene'], html[data-mode='scene'] body { width: 100%; height: 100
 .scene-sound input::-moz-range-track { height: 2px; background: #46574d; }
 .scene-sound input::-moz-range-progress { height: 2px; background: #9aaba1; }
 .scene-sound input::-moz-range-thumb { width: 6px; height: 12px; border: 0; border-radius: 0; background: #b6c4b9; }
-.scene-sound input:focus-visible { outline: 1px dashed #a3ffb7; outline-offset: 1px; }
+.scene-sound input:focus-visible, .scene-sound button:focus-visible { outline: 1px dashed #a3ffb7; outline-offset: 1px; }
 .scene-sound:hover { color: #b6c4b9; }
 .mobile-return { display: none; }
 @media (max-width: 700px), (pointer: coarse) { .mobile-return { display: block; } }
