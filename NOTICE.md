@@ -15,7 +15,9 @@ rose-engine and/or their respective rights holders:
   `public/models/exterior.glb`, and `public/models/lily.glb`.
 - Audio: SIGNALIS-derived recordings in `public/audio/`.
 - Textures: SIGNALIS-derived textures embedded in the models and used
-  in scene images, including `public/images/radio-frequencies.png`.
+  in scene images, including `public/images/radio-frequencies.png` and
+  `public/images/painting-photo-{alina,ariane}.png` (from the Unity
+  `AlinaPhoto` and `ArianePhotoNoCode` references).
 - Font: `public/fonts/signalis-dialogue.woff2`, adapted from the game's
   `SignalisDialogue_rasterHinted16pt` glyph atlas. The web font preserves its
   Latin and Cyrillic pixel shapes and spacing; it remains a third-party asset.
