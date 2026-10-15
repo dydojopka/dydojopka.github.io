@@ -29,6 +29,8 @@ import { createSceneEffectsAudio } from './scene-effects-audio.js';
 import { createBookController } from './book-controller.js';
 import { BOOK_MESSAGES, createBookDialog } from './book-dialog.js';
 import { createMonitorInterference } from './monitor-interference.js';
+import { createPlantController } from './plant-controller.js';
+import { createMonitorPromise, PROMISE_MESSAGE } from './monitor-promise.js';
 import './book-dialog.css';
 import './style.css';
 
@@ -39,6 +41,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let renderer, portfolio, scene, postProcessing, controls, cursor, display, printerController, renderLoop;
   let radioDisplay, keyboardController, bookController, bookDialog, monitorInterference;
+  let plantController, monitorPromise;
   let visible = false;
   let contextLost = false;
   let disposed = false;
@@ -94,8 +97,9 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     const roomActive = active && focus?.state === 'room';
     controls?.setEnabled(roomActive, active && target === 'radio' ? 'radio' : 'room');
     cursor?.setEnabled(active && target !== 'monitor');
-    portfolio?.setEnabled(active && ['room', 'monitor'].includes(target));
-    portfolio?.setFocused(active && target === 'monitor' && focus.state === 'focused');
+    const portfolioActive = active && !monitorPromise?.active;
+    portfolio?.setEnabled(portfolioActive && ['room', 'monitor'].includes(target));
+    portfolio?.setFocused(portfolioActive && target === 'monitor' && focus.state === 'focused');
     monitorControls.hidden = !active || target !== 'monitor' || focus.state === 'room';
     printerControls.hidden = !active || target !== 'printer' || focus.state === 'room';
     leaveRadioButton.hidden = !active || target !== 'radio' || focus.state === 'room';
@@ -117,6 +121,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     portfolio?.dispose(); display?.dispose(); printerController?.dispose();
     radioDisplay?.dispose();
     keyboardController?.dispose();
+    plantController?.dispose(); monitorPromise?.dispose();
     bookController?.dispose(); bookDialog?.dispose(); monitorInterference?.dispose();
     postProcessing?.dispose();
     if (scene) disposeScene(scene);
@@ -170,7 +175,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     const room = await createRoom({ screenTexture: portfolio.texture });
     ({ scene } = room);
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время загрузки сцены.');
-    const { snow, screens, printer } = room;
+    const { snow, screens, printer, plant, plantParts } = room;
     const keyboard = scene.getObjectByName('keyboard');
     keyboardController = createKeyboardController({ keyboard, reducedMotion, onPress: (sound, position) => keyboardAudio.play(sound, position) });
     const book = scene.getObjectByName('book');
@@ -198,7 +203,14 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     cursor = createCursor(host, reducedMotion);
     display = createPrinterDisplayPainter(printer.getObjectByName('printer-display-screen'));
     onProgress('card');
-    await document.fonts?.load('48px "Signalis Dialogue"', BOOK_MESSAGES.join(' ')).catch(() => {});
+    await document.fonts?.load('48px "Signalis Dialogue"', [...BOOK_MESSAGES, PROMISE_MESSAGE].join(' ')).catch(() => {});
+    monitorPromise = createMonitorPromise({
+      screen: screens.primary, light: scene.getObjectByName('monitor-light'), interference: monitorInterference, reducedMotion,
+      onChange() { syncInput(); requestDraw(); },
+    });
+    plantController = createPlantController({
+      plant, ...plantParts, reducedMotion, onPromise: () => monitorPromise.trigger(),
+    });
     const cardImages = await loadBusinessCardImages(about, import.meta.env.BASE_URL);
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время подготовки визитки.');
     printerController = createPrinterController({
@@ -247,8 +259,11 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         keyboardController.update(delta);
         const bookMoving = bookController.moving;
         bookController.update(delta);
+        const plantMoving = plantController.moving;
+        plantController.update(delta);
         monitorInterference.update(delta);
-        if (keysMoving || bookMoving) renderer.shadowMap.needsUpdate = true;
+        monitorPromise.update();
+        if (keysMoving || bookMoving || plantMoving) renderer.shadowMap.needsUpdate = true;
         snow.update(delta);
         if (printerController.paperMoving) renderer.shadowMap.needsUpdate = true;
       },
@@ -346,7 +361,9 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
           : hitBelongsTo(hit, screens.primary.parent) ? 'monitor' : undefined;
       if (focus.state === 'room') {
         if (hitBelongsTo(hit, keyboard)) pressKeyboard();
-        else if (hitBelongsTo(hit, book)) {
+        else if (hitBelongsTo(hit, plant)) {
+          if (plantController.press()) requestDraw();
+        } else if (hitBelongsTo(hit, book)) {
           if (bookController.press()) {
             paperAudio.play('page', book.getWorldPosition(new THREE.Vector3()));
             requestDraw();
@@ -355,8 +372,10 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       } else if (focus.state === 'focused' && hitTarget !== target) leave();
       else if (target === 'radio' && focus.state === 'focused') {
         if (radioFrontHit(radio, hit)) radioController.next();
-      } else if (target === 'monitor' && focus.state === 'focused') portfolio.click(hit);
-      else if (target === 'printer' && focus.state === 'focused') {
+      } else if (target === 'monitor' && focus.state === 'focused') {
+        if (monitorPromise.active) monitorPromise.dismiss();
+        else portfolio.click(hit);
+      } else if (target === 'printer' && focus.state === 'focused') {
         if (hit.object === printerController.sheet && printerController.paper === 'output') openSheet();
         else if (hit.object.name === 'printer-display-screen' && printButtonHit(hit.uv)) print();
       }
@@ -387,6 +406,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     }
     function draw() {
       if (contextLost || disposed) return;
+      if (plantController?.reveal(camera, target, focus.state)) renderer.shadowMap.needsUpdate = true;
       syncAudioPose();
       if (targetsDirty) {
         const size = renderSize(viewport.width, viewport.height, target === 'monitor' && focus.state !== 'room');
@@ -421,6 +441,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       if (reducedMotion.matches) {
         focus.finish(); printerController.finish(); keyboardController.finish();
         bookController.finish(); monitorInterference.clear(); bookDialog.finishTyping();
+        plantController.finish(); monitorPromise.finish();
         renderer.shadowMap.needsUpdate = true;
       }
       syncAnimation();
@@ -439,7 +460,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       activateAudio,
       setVisible(value) {
         visible = value;
-        if (!value) cancelBookEvent();
+        if (!value) { cancelBookEvent(); plantController.finish(); }
         if (value) { resize(); draw(); }
         syncInput(); syncAnimation();
       },
@@ -450,7 +471,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   } catch (error) { dispose(); throw error; }
 
   function cancelBookEvent() {
-    bookController?.cancel(); monitorInterference?.clear();
+    bookController?.cancel();
+    if (!monitorPromise?.active) monitorInterference?.clear();
     bookDialog?.close({ restoreFocus: false });
     if (renderer) renderer.shadowMap.needsUpdate = true;
   }

@@ -12,21 +12,23 @@ import { createRoomLighting } from './room-lighting.js';
 import { cameraView } from './layout.js';
 import { settleShelfDecor } from './upper-shelf.js';
 import { disposeScene } from './dispose-scene.js';
+import { preparePlant } from './plant-model.js';
 
-// Authored meshes and atlases from MyScene and MED_Medical. The converter bakes
+// Authored meshes and atlases from the Unity scenes. The converter bakes
 // Unity transforms and clips the larger building to the workstation room.
 export async function createRoom({ screenTexture }) {
   const loader = new GLTFLoader();
   const models = await Promise.allSettled([
     loader.loadAsync(`${import.meta.env.BASE_URL}models/workstation.glb`),
     loader.loadAsync(`${import.meta.env.BASE_URL}models/exterior.glb`),
+    loader.loadAsync(`${import.meta.env.BASE_URL}models/lily.glb`),
   ]);
   const failure = models.find((model) => model.status === 'rejected');
   if (failure) {
     for (const model of models) if (model.status === 'fulfilled') disposeScene(model.value.scene);
     throw failure.reason;
   }
-  const [{ scene: kit }, { scene: exterior }] = models.map((model) => model.value);
+  const [{ scene: kit }, { scene: exterior }, { scene: lily }] = models.map((model) => model.value);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x080e12);
   scene.fog = new THREE.FogExp2(0x080e12, 0.032);
@@ -60,6 +62,8 @@ export async function createRoom({ screenTexture }) {
   for (const [name, { position, scale, yaw }] of Object.entries(placements)) {
     place(name, position, scale, yaw);
   }
+  const plant = staticRoot.getObjectByName('plant');
+  const plantParts = preparePlant(plant, lily);
   settleShelfDecor(staticRoot.getObjectByName('upper-shelf'), staticRoot.getObjectByName('room-furniture'));
   // This atlas is shared with other props: darken only the radiator's paint.
   staticRoot.getObjectByName('radiator').traverse((object) => {
@@ -108,5 +112,5 @@ export async function createRoom({ screenTexture }) {
   scene.add(createRoomLighting(focus, normal, radioBounds));
   const snow = createSnow();
   scene.add(snow.mesh);
-  return { scene, snow, screens: { primary: screen }, printer };
+  return { scene, snow, screens: { primary: screen }, printer, plant, plantParts };
 }

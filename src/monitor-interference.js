@@ -31,6 +31,7 @@ ${shader.fragmentShader}`;
   material.needsUpdate = true;
   function clear() { elapsed = DURATION; intensity.value = 0; }
   return {
+    get active() { return !disposed && elapsed < DURATION; },
     trigger() { if (!disposed) { elapsed = 0; intensity.value = 1; time.value = 0; } },
     update(delta) {
       if (disposed || elapsed >= DURATION) return;
