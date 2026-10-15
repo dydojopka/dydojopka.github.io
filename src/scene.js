@@ -13,6 +13,7 @@ import { cameraView } from './layout.js';
 import { settleShelfDecor } from './upper-shelf.js';
 import { disposeScene } from './dispose-scene.js';
 import { preparePlant } from './plant-model.js';
+import { loadPaintingPhotos, preparePainting } from './painting-model.js';
 
 // Authored meshes and atlases from the Unity scenes. The converter bakes
 // Unity transforms and clips the larger building to the workstation room.
@@ -22,10 +23,14 @@ export async function createRoom({ screenTexture }) {
     loader.loadAsync(`${import.meta.env.BASE_URL}models/workstation.glb`),
     loader.loadAsync(`${import.meta.env.BASE_URL}models/exterior.glb`),
     loader.loadAsync(`${import.meta.env.BASE_URL}models/lily.glb`),
+    loadPaintingPhotos(import.meta.env.BASE_URL),
   ]);
   const failure = models.find((model) => model.status === 'rejected');
   if (failure) {
-    for (const model of models) if (model.status === 'fulfilled') disposeScene(model.value.scene);
+    for (const model of models) if (model.status === 'fulfilled') {
+      if (model.value.scene) disposeScene(model.value.scene);
+      else for (const texture of model.value) texture.dispose();
+    }
     throw failure.reason;
   }
   const [{ scene: kit }, { scene: exterior }, { scene: lily }] = models.map((model) => model.value);
@@ -65,6 +70,7 @@ export async function createRoom({ screenTexture }) {
   const plant = staticRoot.getObjectByName('plant');
   const plantParts = preparePlant(plant, lily);
   settleShelfDecor(staticRoot.getObjectByName('upper-shelf'), staticRoot.getObjectByName('room-furniture'));
+  const painting = preparePainting(staticRoot.getObjectByName('upper-shelf'), models[3].value);
   // This atlas is shared with other props: darken only the radiator's paint.
   staticRoot.getObjectByName('radiator').traverse((object) => {
     if (!object.isMesh) return;
@@ -112,5 +118,5 @@ export async function createRoom({ screenTexture }) {
   scene.add(createRoomLighting(focus, normal, radioBounds));
   const snow = createSnow();
   scene.add(snow.mesh);
-  return { scene, snow, screens: { primary: screen }, printer, plant, plantParts };
+  return { scene, snow, screens: { primary: screen }, printer, plant, plantParts, painting };
 }

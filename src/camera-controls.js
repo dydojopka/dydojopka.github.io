@@ -100,6 +100,12 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
     change(0, profile.initialPitch);
   }
   function updateHelp() {
+    if (helpTarget === 'painting') {
+      help.textContent = coarsePointer.matches
+        ? 'Вращение — перетаскивание · Назад — нажатие вне картины'
+        : 'Вращение — перетаскивание · На полку — клик вне картины / Esc / Home';
+      return;
+    }
     help.textContent = helpTarget === 'radio'
       ? coarsePointer.matches ? 'Станция — нажатие'
         : 'Станция — клик / Enter · К столу — Esc / Home'
@@ -183,7 +189,7 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
         helpTarget = nextHelpTarget;
         updateHelp();
       }
-      controls.hidden = !value && helpTarget !== 'radio';
+      controls.hidden = !value && !['radio', 'painting'].includes(helpTarget);
       stop();
     },
     stop,
