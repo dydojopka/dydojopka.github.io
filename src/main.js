@@ -32,6 +32,10 @@ import { createMonitorInterference } from './monitor-interference.js';
 import { createPlantController } from './plant-controller.js';
 import { createMonitorPromise, PROMISE_MESSAGE } from './monitor-promise.js';
 import { createPaintingController } from './painting-controller.js';
+import { createWindowCode } from './window-code.js';
+import { createWindowTransition } from './window-transition.js';
+import { createWindowAudio } from './window-audio.js';
+import { frameRedDesert } from './red-desert.js';
 import './book-dialog.css';
 import './style.css';
 
@@ -43,6 +47,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   let renderer, portfolio, scene, postProcessing, controls, cursor, display, printerController, renderLoop;
   let radioDisplay, keyboardController, bookController, bookDialog, monitorInterference;
   let plantController, monitorPromise, paintingController;
+  let windowCode, windowTransition;
   let pointerDown;
   let visible = false;
   let contextLost = false;
@@ -75,7 +80,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     onChange(station) {
       radioDisplay?.setFrequency(station.frequency);
       host.dataset.radioFrequency = station.frequency;
-      radioStatus.textContent = `Частота ${station.frequency}. ${station.title}.`;
+      radioStatus.textContent = `Частота ${station.frequency}. ${radioAudio.interference ? 'Радиопомехи' : station.title}.`;
       radioAudio.select();
     },
   });
@@ -90,6 +95,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     sounds: { click: 'lamp-switch.mp3' },
   });
   audio.addStream(lampAudio);
+  const windowAudio = createWindowAudio({ baseUrl: import.meta.env.BASE_URL });
+  audio.addStream(windowAudio);
   syncSceneVolumeControl(soundSlider, soundControl, audio.volume, soundMuteButton);
   soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
   soundMuteButton.addEventListener('click', () => audio.toggleMute(), options);
@@ -137,6 +144,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     keyboardController?.dispose();
     plantController?.dispose(); monitorPromise?.dispose();
     paintingController?.dispose();
+    windowCode?.dispose(); windowTransition?.dispose();
     bookController?.dispose(); bookDialog?.dispose(); monitorInterference?.dispose();
     postProcessing?.dispose();
     if (scene) disposeScene(scene);
@@ -191,7 +199,39 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     const room = await createRoom({ screenTexture: portfolio.texture });
     ({ scene } = room);
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время загрузки сцены.');
-    const { snow, screens, printer, plant, plantParts, painting } = room;
+    const { snow, winter, desert, screens, printer, plant, plantParts, painting } = room;
+    const windowLights = [
+      ['window-light', 0xff2538, 14],
+      ['window-bounce-light', 0xe7273b, 2],
+    ].map(([name, color, intensity]) => {
+      const light = scene.getObjectByName(name);
+      return { light, fromColor: light.color.clone(), fromIntensity: light.intensity,
+        toColor: new THREE.Color(color), toIntensity: intensity };
+    });
+    windowTransition = createWindowTransition({
+      winter, desert, snow, reducedMotion,
+      onGust: (strength) => audio.setWindGust(strength),
+      onReveal() {
+        audio.setDesert(true);
+        radioAudio.setInterference(true);
+        radioStatus.textContent = `Частота ${radioController.frequency}. Радиопомехи.`;
+        const description = host.getAttribute('aria-label').replace('За окном сильная метель.', 'За окном красная пустыня с вратами, колоннами и разбитым кораблём.');
+        host.setAttribute('aria-label', description);
+        renderer.domElement.setAttribute('aria-label', description);
+      },
+      onRevealProgress(progress) {
+        for (const { light, fromColor, fromIntensity, toColor, toIntensity } of windowLights) {
+          light.color.copy(fromColor).lerp(toColor, progress);
+          light.intensity = fromIntensity + (toIntensity - fromIntensity) * progress;
+        }
+      },
+      onChange: requestDraw,
+    });
+    scene.add(windowTransition.veil);
+    windowCode = createWindowCode({
+      onPart: () => windowAudio.play('impact', new THREE.Vector3(0, 4, -2.7)),
+      onComplete: () => windowTransition.trigger(),
+    });
     const lamp = scene.getObjectByName('desk-lamp');
     const lampLight = scene.getObjectByName('desk-lamp-light');
     const lampIntensity = lampLight.intensity;
@@ -294,7 +334,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         monitorInterference.update(delta);
         monitorPromise.update();
         if (keysMoving || bookMoving || plantMoving || paintingMoving) renderer.shadowMap.needsUpdate = true;
-        snow.update(delta);
+        windowTransition.update(delta);
+        if (snow.mesh.visible) snow.update(delta);
         if (printerController.paperMoving) renderer.shadowMap.needsUpdate = true;
       },
       draw() {
@@ -346,7 +387,11 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     leaveRadioButton.addEventListener('click', leave, options);
     leavePaintingButton.addEventListener('click', leave, options);
     document.addEventListener('keydown', (event) => {
-      if (!visible || contextLost || bookDialog.open || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      if (!visible || contextLost || document.hidden || bookDialog.open || event.altKey || event.ctrlKey || event.metaKey || event.repeat || event.isComposing) return;
+      if (/^[0-9]$/.test(event.key) && !event.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) {
+        activateAudio(event);
+        windowCode.input(event.key);
+      }
       if (paintingController.active && ['Escape', 'Home'].includes(event.key)) {
         event.preventDefault(); leave();
         return;
@@ -450,6 +495,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       const rect = host.getBoundingClientRect();
       viewport = { width: rect.width || window.innerWidth, height: rect.height || window.innerHeight };
       const { width, height } = viewport;
+      frameRedDesert(desert, width / height);
       const previous = cameraPose(camera);
       const view = cameraView(width / height, deskBounds, monitorCenter, monitorNormal);
       controls.configure(view);
@@ -484,17 +530,22 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       if (renderer.getContext().isContextLost()) throw new Error('Графический контекст недоступен.');
       portfolio.updateTextProjection();
     }
+    async function compileScene() {
+      if (contextLost || disposed) throw new Error('Графический контекст недоступен во время подготовки сцены.');
+      const compilation = new AbortController();
+      try {
+        await Promise.race([
+          renderer.compileAsync(scene, camera),
+          new Promise((resolve, reject) => renderer.domElement.addEventListener('webglcontextlost', () => reject(new Error('Контекст потерян во время подготовки сцены.')), { once: true, signal: compilation.signal })),
+        ]);
+      } finally { compilation.abort(); }
+      if (contextLost || disposed) throw new Error('Графический контекст недоступен после подготовки сцены.');
+    }
     async function warmPrinter() {
+      await windowTransition.warmup(compileScene);
       await printerController.warmup(async (texture) => {
         renderer.initTexture(texture);
-        const compilation = new AbortController();
-        try {
-          await Promise.race([
-            renderer.compileAsync(scene, camera),
-            new Promise((resolve, reject) => renderer.domElement.addEventListener('webglcontextlost', () => reject(new Error('Контекст потерян во время подготовки печати.')), { once: true, signal: compilation.signal })),
-          ]);
-        } finally { compilation.abort(); }
-        if (contextLost || disposed) throw new Error('Графический контекст недоступен после подготовки печати.');
+        await compileScene();
         draw();
       });
       renderer.shadowMap.needsUpdate = true;
@@ -512,6 +563,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         bookController.finish(); monitorInterference.clear(); bookDialog.finishTyping();
         plantController.finish(); monitorPromise.finish();
         paintingController.finish();
+        windowTransition.finish();
         renderer.shadowMap.needsUpdate = true;
       }
       syncAnimation();

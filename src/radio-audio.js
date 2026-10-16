@@ -1,3 +1,5 @@
+import { RADIO_STATIONS } from './radio-stations.js';
+
 const FADE_SECONDS = 0.08;
 
 function waitForMedia(element, eventName, ready, signal) {
@@ -30,6 +32,7 @@ export function createRadioAudio({
   let context, output;
   let active = false;
   let disposed = false;
+  let interference = false;
   let current;
   let emitter;
 
@@ -139,7 +142,7 @@ export function createRadioAudio({
   function start() {
     if (!active || disposed || !context) return;
     let slot;
-    try { slot = slotFor(controller.station); }
+    try { slot = slotFor(interference ? RADIO_STATIONS[0] : controller.station); }
     catch (error) { onError(error); return; }
     current = slot;
     if (slot.playing || slot.attempt) return;
@@ -189,6 +192,7 @@ export function createRadioAudio({
     });
   }
   return {
+    get interference() { return interference; },
     connect(graph) {
       if (context || disposed) return;
       ({ context, output } = graph);
@@ -205,7 +209,17 @@ export function createRadioAudio({
     },
     select() {
       if (disposed) return;
+      if (interference) { start(); return; }
       if (current) stop(current);
+      current = undefined;
+      start();
+    },
+    setInterference(value) {
+      if (disposed || interference === Boolean(value)) return;
+      interference = Boolean(value);
+      // Cancel every pending play/seek and any still-fading station. A late
+      // musical response must stay silent after the exterior has changed.
+      for (const slot of slots.values()) stop(slot, true);
       current = undefined;
       start();
     },

@@ -14,6 +14,7 @@ import { settleShelfDecor } from './upper-shelf.js';
 import { disposeScene } from './dispose-scene.js';
 import { preparePlant } from './plant-model.js';
 import { loadPaintingPhotos, preparePainting } from './painting-model.js';
+import { createRedDesert } from './red-desert.js';
 
 // Authored meshes and atlases from the Unity scenes. The converter bakes
 // Unity transforms and clips the larger building to the workstation room.
@@ -24,6 +25,7 @@ export async function createRoom({ screenTexture }) {
     loader.loadAsync(`${import.meta.env.BASE_URL}models/exterior.glb`),
     loader.loadAsync(`${import.meta.env.BASE_URL}models/lily.glb`),
     loadPaintingPhotos(import.meta.env.BASE_URL),
+    loader.loadAsync(`${import.meta.env.BASE_URL}models/red-desert.glb`),
   ]);
   const failure = models.find((model) => model.status === 'rejected');
   if (failure) {
@@ -109,7 +111,10 @@ export async function createRoom({ screenTexture }) {
   const deskBounds = new THREE.Box3().setFromObject(staticRoot.getObjectByName('desk'));
   const furthestCamera = new THREE.Vector3(...cameraView(0.1, deskBounds, focus, normal).position);
   staticRoot.add(createRoomEnclosure(roomBounds, { wall: material(0x26382e), floor: material(0x202821) }, furthestCamera));
-  scene.add(createExterior(exterior));
+  const winter = createExterior(exterior);
+  const desert = createRedDesert(models[4].value.scene);
+  desert.visible = false;
+  scene.add(winter, desert);
   box([6.4, 0.032, 0.18], [0, 2.12, -2.77], paper);
   box([0.85, 0.075, 0.86], [4.18, 2.7475, -2.15], metal);
   cable([[-0.15, desktop + 0.14, -1.2], [0.4, desktop + 0.01, -1.42], [0.68, 1.7, -1.49], [0.7, 0.12, -1.49], [2.9, 0.08, -2.1]]);
@@ -118,5 +123,5 @@ export async function createRoom({ screenTexture }) {
   scene.add(createRoomLighting(focus, normal, radioBounds));
   const snow = createSnow();
   scene.add(snow.mesh);
-  return { scene, snow, screens: { primary: screen }, printer, plant, plantParts, painting };
+  return { scene, snow, winter, desert, screens: { primary: screen }, printer, plant, plantParts, painting };
 }

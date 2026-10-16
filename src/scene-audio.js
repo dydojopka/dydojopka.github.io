@@ -2,6 +2,7 @@ const SOUNDS = {
   wind: { file: 'window-wind.mp3', volume: 0.8, filter: { frequency: 1000, Q: -3 } },
   computer: { file: 'computer-loop.mp3', volume: 0.35, spatial: { refDistance: 1.7, rolloffFactor: 1.05 } },
   printer: { file: 'printer-loop.mp3', volume: 1.4, spatial: { refDistance: 1.8, rolloffFactor: 1, coneInnerAngle: 12, coneOuterAngle: 50, coneOuterGain: 0.18 } },
+  desert: { file: 'window-toteninsel.mp3', volume: 0.65, optional: true },
 };
 
 function copyVector(target, value) {
@@ -27,6 +28,7 @@ export function createSceneAudio({
   const events = new AbortController();
   const buffers = new Map();
   const pending = new Map();
+  const unavailable = new Set();
   const playing = new Map();
   const emitters = new Map();
   const streams = new Set();
@@ -38,10 +40,26 @@ export function createSceneAudio({
   let unlocked = false;
   let active = false;
   let printing = false;
+  let desert = false;
+  let windGust = 0;
   let disposed = false;
 
   const audible = () => unlocked && volume > 0 && active && !disposed;
-  const wanted = (name) => audible() && (name !== 'printer' || printing);
+  const wanted = (name) => audible() && (name !== 'printer' || printing)
+    && (name !== 'wind' || !desert) && (name !== 'desert' || desert);
+  const windVolume = () => SOUNDS.wind.volume * (1 + 2 * windGust);
+  const windFrequency = () => SOUNDS.wind.filter.frequency + 1800 * windGust;
+
+  function windTarget(parameter, value) {
+    const time = context.currentTime;
+    if (parameter.cancelAndHoldAtTime) parameter.cancelAndHoldAtTime(time);
+    else {
+      const held = parameter.value;
+      parameter.cancelScheduledValues?.(time);
+      parameter.setValueAtTime(held, time);
+    }
+    parameter.setTargetAtTime(value, time, 0.07);
+  }
 
   function stop(name) {
     const nodes = playing.get(name);
@@ -67,6 +85,7 @@ export function createSceneAudio({
   }
   function load(name) {
     if (buffers.has(name)) return Promise.resolve(buffers.get(name));
+    if (unavailable.has(name)) return Promise.resolve();
     if (!pending.has(name)) {
       const promise = (async () => {
         const response = await request(`${baseUrl}audio/${SOUNDS[name].file}`, { signal: events.signal });
@@ -110,12 +129,12 @@ export function createSceneAudio({
     source.buffer = buffer;
     source.loop = true;
     gain.gain.setValueAtTime(0, context.currentTime);
-    gain.gain.linearRampToValueAtTime(SOUNDS[name].volume, context.currentTime + 0.02);
+    gain.gain.linearRampToValueAtTime(name === 'wind' ? windVolume() : SOUNDS[name].volume, context.currentTime + 0.02);
     source.connect(gain);
     let output = gain;
     if (filter) {
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(filterSettings.frequency, context.currentTime);
+      filter.frequency.setValueAtTime(name === 'wind' ? windFrequency() : filterSettings.frequency, context.currentTime);
       filter.Q.setValueAtTime(filterSettings.Q, context.currentTime);
       gain.connect(filter);
       output = filter;
@@ -131,6 +150,7 @@ export function createSceneAudio({
   }
   function sync(gesture = false) {
     if (!printing) stop('printer');
+    stop(desert ? 'wind' : 'desert');
     if (!audible()) { suspend(); return; }
     for (const stream of streams) {
       stream.setActive(true);
@@ -139,7 +159,16 @@ export function createSceneAudio({
     // resume() runs from a scene gesture, before fetching or decoding audio.
     context.resume().then(() => {
       if (!audible()) { suspend(); return; }
-      for (const name of Object.keys(SOUNDS)) load(name).then((buffer) => start(name, buffer)).catch(failed);
+      for (const [name, sound] of Object.entries(SOUNDS)) {
+        if ((name === 'wind' && desert) || (sound.optional && !wanted(name))) continue;
+        load(name).then((buffer) => start(name, buffer)).catch((error) => {
+          if (name === 'wind' && desert) return;
+          if (!sound.optional) { failed(error); return; }
+          if (disposed || unavailable.has(name)) return;
+          unavailable.add(name);
+          onError(error);
+        });
+      }
     }).catch(failed);
   }
   function activate() {
@@ -206,6 +235,22 @@ export function createSceneAudio({
       printing = value;
       sync();
     },
+    setDesert(value) {
+      if (disposed || desert === value) return;
+      desert = value;
+      if (desert) windGust = 0;
+      sync();
+    },
+    setWindGust(value) {
+      if (disposed || desert) return;
+      const next = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+      if (windGust === next) return;
+      windGust = next;
+      const wind = playing.get('wind');
+      if (!wind) return;
+      windTarget(wind.gain.gain, windVolume());
+      windTarget(wind.filter.frequency, windFrequency());
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -218,6 +263,7 @@ export function createSceneAudio({
       master?.disconnect();
       buffers.clear();
       pending.clear();
+      unavailable.clear();
       emitters.clear();
     },
   };
