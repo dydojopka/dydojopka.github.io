@@ -1,22 +1,22 @@
-import { Mesh, PlaneGeometry, ShaderMaterial } from 'three';
+import { Mesh, ShaderMaterial } from 'three';
 
 const COVER_TIME = 1.8;
 const REVEAL_TIME = 2.8;
 const END_TIME = 4.8;
 
-export function createWindowTransition({ winter, desert, snow, reducedMotion, onReveal = () => {}, onRevealProgress = () => {}, onComplete = () => {}, onChange = () => {}, onGust = () => {} }) {
+export function createWindowTransition({ winter, desert, snow, windowPane, reducedMotion, onReveal = () => {}, onRevealProgress = () => {}, onComplete = () => {}, onChange = () => {}, onGust = () => {} }) {
   const material = new ShaderMaterial({
     transparent: true, depthWrite: false, toneMapped: false,
     uniforms: { time: { value: 0 }, cover: { value: 0 }, clearing: { value: 0 } },
     vertexShader: `
-      varying vec2 windowUv;
+      varying vec2 windowPosition;
       void main() {
-        windowUv = uv;
+        windowPosition = (modelMatrix * vec4(position, 1.0)).xy;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: `
-      varying vec2 windowUv;
+      varying vec2 windowPosition;
       uniform float time;
       uniform float cover;
       uniform float clearing;
@@ -31,13 +31,13 @@ export function createWindowTransition({ winter, desert, snow, reducedMotion, on
           mix(hash(cell + vec2(0.0, 1.0)), hash(cell + vec2(1.0)), f.x), f.y);
       }
       void main() {
-        vec2 p = (windowUv - 0.5) * vec2(30.0, 20.0);
+        vec2 p = windowPosition - vec2(0.0, 4.0);
         // The same left-to-right wind as the particles carries elongated
         // snow clouds across the opening, then sweeps them away to the right.
         vec2 wind = vec2(p.x - time * 13.0, p.y + p.x * 0.08);
         float cloud = noise(wind * vec2(0.18, 1.3)) * 0.65
           + noise(wind * vec2(0.4, 4.0)) * 0.35;
-        float grain = hash(floor(windowUv * vec2(1200.0, 800.0)) + floor(time * 30.0));
+        float grain = hash(floor((p + vec2(15.0, 10.0)) * 40.0) + floor(time * 30.0));
         float progress = mix(cover, 1.0 - cover, clearing);
         float front = mix(-6.5, 6.5, progress);
         float passed = smoothstep(front - 1.0, front + 1.0, p.x + (cloud - 0.5) * 1.5);
@@ -50,9 +50,12 @@ export function createWindowTransition({ winter, desert, snow, reducedMotion, on
       }
     `,
   });
-  const veil = new Mesh(new PlaneGeometry(30, 20), material);
+  // Fit the actual aperture at the rear wall, so the veil cannot extend into
+  // the room or appear through its side walls. Keep the noise in world units.
+  windowPane.updateWorldMatrix(true, false);
+  const veil = new Mesh(windowPane.geometry.clone(), material);
   veil.name = 'window-whiteout';
-  veil.position.set(0, 4, -3.06);
+  veil.applyMatrix4(windowPane.matrixWorld);
   veil.renderOrder = 20;
   veil.visible = false;
   desert.visible = false;

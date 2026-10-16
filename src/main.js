@@ -219,6 +219,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     });
     windowTransition = createWindowTransition({
       winter, desert, snow, reducedMotion,
+      windowPane: scene.getObjectByName('room-window-glass'),
       onGust: (strength) => audio.setWindGust(strength),
       onReveal() {
         audio.setDesert(true);
