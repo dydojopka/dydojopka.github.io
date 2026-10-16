@@ -20,6 +20,9 @@ rose-engine and/or their respective rights holders:
   in scene images, including `public/images/radio-frequencies.png` and
   `public/images/painting-photo-{alina,ariane}.png` (from the Unity
   `AlinaPhoto` and `ArianePhotoNoCode` references).
+  `public/images/death-blue-screen.png` preserves the original Unity
+  `BlueScreen1` fatal-error texture. `public/audio/elster-death.mp3` is the
+  complete `elster_death_tempsound` recording with attenuation and a low-pass filter.
 - Font: `public/fonts/signalis-dialogue.woff2`, adapted from the game's
   `SignalisDialogue_rasterHinted16pt` glyph atlas. The web font preserves its
   Latin and Cyrillic pixel shapes and spacing; it remains a third-party asset.
