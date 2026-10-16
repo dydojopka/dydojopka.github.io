@@ -12,7 +12,9 @@ The following assets derived from SIGNALIS remain the property of
 rose-engine and/or their respective rights holders:
 
 - 3D models, including modified versions: `public/models/workstation.glb`,
-  `public/models/exterior.glb`, and `public/models/lily.glb`.
+  `public/models/exterior.glb`, `public/models/lily.glb`, and
+  `public/models/red-desert.glb` (the Red Gate, stone pillars, terrain and
+  Penrose wreck from the Unity assets).
 - Audio: SIGNALIS-derived recordings in `public/audio/`.
 - Textures: SIGNALIS-derived textures embedded in the models and used
   in scene images, including `public/images/radio-frequencies.png` and
