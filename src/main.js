@@ -36,7 +36,10 @@ import { createWindowCode } from './window-code.js';
 import { createWindowTransition } from './window-transition.js';
 import { createWindowAudio } from './window-audio.js';
 import { frameRedDesert } from './red-desert.js';
+import { createDeathSequence } from './death-sequence.js';
+import { createDeathAudio } from './death-audio.js';
 import './book-dialog.css';
+import './death-sequence.css';
 import './style.css';
 
 export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, onProgress = () => {} }) {
@@ -48,6 +51,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   let radioDisplay, keyboardController, bookController, bookDialog, monitorInterference;
   let plantController, monitorPromise, paintingController;
   let windowCode, windowTransition;
+  let deathSequence;
   let pointerDown;
   let visible = false;
   let contextLost = false;
@@ -97,6 +101,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   audio.addStream(lampAudio);
   const windowAudio = createWindowAudio({ baseUrl: import.meta.env.BASE_URL });
   audio.addStream(windowAudio);
+  const deathAudio = createDeathAudio({ baseUrl: import.meta.env.BASE_URL });
+  audio.addStream(deathAudio);
   syncSceneVolumeControl(soundSlider, soundControl, audio.volume, soundMuteButton);
   soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
   soundMuteButton.addEventListener('click', () => audio.toggleMute(), options);
@@ -108,7 +114,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
 
   function requestDraw() { renderLoop?.requestDraw(); }
   function syncInput() {
-    const active = visible && !contextLost && !disposed && !bookDialog?.open;
+    const active = visible && !contextLost && !disposed && !bookDialog?.open && !deathSequence?.running;
+    if (!active) deathSequence?.resetInput();
     syncSceneVolumeControl(soundSlider, soundControl, audio.volume, soundMuteButton);
     soundControl.hidden = !active;
     const roomActive = active && focus?.state === 'room' && !paintingController?.active;
@@ -129,7 +136,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     controls?.stop();
     bookDialog?.setActive(visible && !contextLost && !document.hidden && !disposed);
     audio.setActive(visible && !contextLost && !document.hidden && !disposed);
-    renderLoop?.setMode({ visible: visible && !contextLost && !document.hidden && !disposed, animated: !reducedMotion.matches });
+    deathSequence?.setActive(visible && !contextLost && !document.hidden && !disposed);
+    renderLoop?.setMode({ visible: visible && !contextLost && !document.hidden && !disposed, animated: !reducedMotion.matches && !deathSequence?.running });
   }
   function dispose() {
     if (disposed) return;
@@ -137,6 +145,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     cancelPainting();
     renderLoop?.setMode({ visible: false, animated: false });
     events.abort();
+    deathSequence?.dispose();
     audio.dispose();
     controls?.dispose(); cursor?.dispose();
     portfolio?.dispose(); display?.dispose(); printerController?.dispose();
@@ -267,6 +276,19 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     const monitorCenter = screenCenter(screens.primary);
     const monitorNormal = screenNormal(screens.primary);
     postProcessing = createPostProcessing(renderer);
+    deathSequence = createDeathSequence({
+      document, baseUrl: import.meta.env.BASE_URL, reducedMotion,
+      onStart() {
+        clearPointer(); cancelBookEvent(); controls.stop();
+        audio.setDying(true); deathAudio.play();
+        syncInput(); syncAnimation();
+      },
+      onTime: (time) => deathAudio.setTime(time),
+      onVisual({ time, strength, phase }) {
+        postProcessing.setDeath(time, strength);
+        if (phase === 'glitch') requestDraw();
+      },
+    });
     controls = createCameraControls({ host, camera, reducedMotion, onChange: requestDraw });
     cursor = createCursor(host, reducedMotion);
     display = createPrinterDisplayPainter(printer.getObjectByName('printer-display-screen'));
@@ -344,7 +366,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       },
     });
     function enter(nextTarget) {
-      if (!visible || contextLost || bookDialog.open || focus.state !== 'room') return false;
+      if (!visible || contextLost || bookDialog.open || deathSequence.running || focus.state !== 'room') return false;
       cancelPainting();
       cancelBookEvent();
       controls.stop();
@@ -356,7 +378,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       return focus.enter();
     }
     function leave() {
-      if (!visible || contextLost || ['lifting', 'returning'].includes(printerController.paper)) return;
+      if (!visible || contextLost || deathSequence.running || ['lifting', 'returning'].includes(printerController.paper)) return;
       if (paintingController.active) {
         clearPointer(); paintingController.putBack();
         return;
@@ -364,16 +386,16 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       focus.leave();
     }
     function print() {
-      if (visible && !contextLost && target === 'printer' && focus.state === 'focused') printerController.print();
+      if (visible && !contextLost && !deathSequence.running && target === 'printer' && focus.state === 'focused') printerController.print();
     }
     function pressKeyboard() {
-      if (!visible || contextLost || document.hidden || bookDialog.open || focus.state !== 'room') return;
+      if (!visible || contextLost || document.hidden || bookDialog.open || deathSequence.running || focus.state !== 'room') return;
       keyboardController.press();
       renderer.shadowMap.needsUpdate = true;
       requestDraw();
     }
     function openSheet(callback = onCard) {
-      if (!visible || contextLost || bookDialog.open || !printerController.printed) return false;
+      if (!visible || contextLost || bookDialog.open || deathSequence.running || !printerController.printed) return false;
       cancelPainting();
       if (focus.state !== 'focused' || target !== 'printer') {
         if (focus.state !== 'room') { focus.leave(); focus.finish(); }
@@ -387,6 +409,10 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     leaveRadioButton.addEventListener('click', leave, options);
     leavePaintingButton.addEventListener('click', leave, options);
     document.addEventListener('keydown', (event) => {
+      if (visible && !contextLost && !document.hidden && !bookDialog.open && deathSequence.input(event)) {
+        event.preventDefault(); return;
+      }
+      if (deathSequence.running) return;
       if (!visible || contextLost || document.hidden || bookDialog.open || event.altKey || event.ctrlKey || event.metaKey || event.repeat || event.isComposing) return;
       if (/^[0-9]$/.test(event.key) && !event.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) {
         activateAudio(event);
@@ -425,7 +451,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     }
     host.addEventListener('pointerdown', (event) => {
       const touchText = event.pointerType !== 'mouse' && event.target.closest('.monitor-text-layer');
-      if (!visible || contextLost || bookDialog.open || focus.moving || paintingController.moving || event.button !== 0 || (event.target.tagName !== 'CANVAS' && !touchText) || pointerDown) return;
+      if (!visible || contextLost || deathSequence.running || bookDialog.open || focus.moving || paintingController.moving || event.button !== 0 || (event.target.tagName !== 'CANVAS' && !touchText) || pointerDown) return;
       pointerDown = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false,
         state: focus.state, textLink: touchText && event.target.closest('a'),
         painting: paintingController.active, rotate: paintingController.active && hitBelongsTo(sceneHit(event), painting.root) };
@@ -451,7 +477,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       if (pointerDown?.id !== event.pointerId) return;
       const down = pointerDown; pointerDown = undefined;
       if (host.hasPointerCapture(event.pointerId)) host.releasePointerCapture(event.pointerId);
-      if (!visible || contextLost || bookDialog.open || !down || down.id !== event.pointerId || down.moved) return;
+      if (!visible || contextLost || deathSequence.running || bookDialog.open || !down || down.id !== event.pointerId || down.moved) return;
       if (focus.moving || paintingController.moving || down.state !== focus.state || down.textLink) return;
       const hit = sceneHit(event);
       if (down.painting) {
@@ -553,8 +579,11 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     }
     window.addEventListener('resize', resize, options);
     document.addEventListener('visibilitychange', syncAnimation, options);
-    window.addEventListener('pagehide', () => { cancelPainting(); audio.setActive(false); bookDialog.setActive(false); }, options);
-    window.addEventListener('blur', clearPointer, options);
+    window.addEventListener('pagehide', () => {
+      cancelPainting(); audio.setActive(false); bookDialog.setActive(false); deathSequence.setActive(false);
+      renderLoop.setMode({ visible: false, animated: false });
+    }, options);
+    window.addEventListener('blur', () => { clearPointer(); deathSequence.resetInput(); }, options);
     document.addEventListener('visibilitychange', () => { if (document.hidden) clearPointer(); }, options);
     window.addEventListener('pageshow', syncAnimation, options);
     reducedMotion.addEventListener('change', () => {
@@ -566,6 +595,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         windowTransition.finish();
         renderer.shadowMap.needsUpdate = true;
       }
+      deathSequence.refresh();
       syncAnimation();
     }, options);
     host.dataset.focusTarget = host.dataset.focusState = host.dataset.monitorState = 'room';

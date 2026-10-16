@@ -43,9 +43,10 @@ export function createSceneAudio({
   let desert = false;
   let windGust = 0;
   let disposed = false;
+  let dying = false;
 
   const audible = () => unlocked && volume > 0 && active && !disposed;
-  const wanted = (name) => audible() && (name !== 'printer' || printing)
+  const wanted = (name) => audible() && !dying && (name !== 'printer' || printing)
     && (name !== 'wind' || !desert) && (name !== 'desert' || desert);
   const windVolume = () => SOUNDS.wind.volume * (1 + 2 * windGust);
   const windFrequency = () => SOUNDS.wind.filter.frequency + 1800 * windGust;
@@ -149,19 +150,23 @@ export function createSceneAudio({
     source.start();
   }
   function sync(gesture = false) {
+    if (dying) for (const name of playing.keys()) stop(name);
     if (!printing) stop('printer');
     stop(desert ? 'wind' : 'desert');
     if (!audible()) { suspend(); return; }
     for (const stream of streams) {
-      stream.setActive(true);
-      if (gesture) stream.activate();
+      const enabled = !dying || stream.duringDeath === true;
+      stream.setActive(enabled);
+      if (gesture && enabled) stream.activate();
     }
     // resume() runs from a scene gesture, before fetching or decoding audio.
     context.resume().then(() => {
       if (!audible()) { suspend(); return; }
       for (const [name, sound] of Object.entries(SOUNDS)) {
+        if (dying) continue;
         if ((name === 'wind' && desert) || (sound.optional && !wanted(name))) continue;
         load(name).then((buffer) => start(name, buffer)).catch((error) => {
+          if (dying) return;
           if (name === 'wind' && desert) return;
           if (!sound.optional) { failed(error); return; }
           if (disposed || unavailable.has(name)) return;
@@ -208,10 +213,15 @@ export function createSceneAudio({
       if (disposed) { stream.dispose(); return; }
       streams.add(stream);
       if (context) stream.connect({ context, output: master });
-      stream.setActive(audible());
+      stream.setActive(audible() && (!dying || stream.duringDeath === true));
     },
     setVolume,
     toggleMute() { setVolume(volume > 0 ? 0 : previousVolume); },
+    setDying(value) {
+      if (disposed || dying === value) return;
+      dying = value;
+      sync();
+    },
     setSource(name, position, direction = { x: 0, y: 0, z: 1 }) {
       if (disposed || !SOUNDS[name]?.spatial) return;
       emitters.set(name, { position: { ...position }, direction: { ...direction } });
