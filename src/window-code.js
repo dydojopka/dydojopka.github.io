@@ -1,4 +1,4 @@
-const PARTS = ['39486', '60170', '24326', '01064', '97867'];
+const PARTS = ['39486', '60170', '24326', '01064'];
 
 export function createWindowCode({ onPart = () => {}, onComplete = () => {} } = {}) {
   let part = 0;
