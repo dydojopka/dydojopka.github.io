@@ -41,10 +41,11 @@ export function businessCardHtml({ about, projects, locale: contentLocale }, bas
   const contactsTitle = escapeHtml(t('card.contacts', {}, locale));
   const projectsTitle = escapeHtml(t('card.projects', {}, locale));
   return `<article class="business-card" aria-labelledby="card-title">
-    <header><h1 id="card-title" tabindex="-1">${escapeHtml(about.title)}</h1>
+    <header><h1 id="card-title" tabindex="-1">${escapeHtml(about.title)}</h1></header>
+    <div class="card-profile">
       ${photoUrl ? `<img class="card-portrait" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(about.title)}" width="809" height="1078">` : ''}
-    </header>
-    ${semanticMarkdownHtml(about)}
+      ${semanticMarkdownHtml(about)}
+    </div>
     <section aria-labelledby="card-contacts"><h2 id="card-contacts">${contactsTitle}</h2>
       <ul>${about.contacts.map((contact) => `<li><a href="${escapeHtml(contact.href)}">${escapeHtml(contact.label)}</a>: ${escapeHtml(contact.value)}</li>`).join('')}</ul>
     </section>

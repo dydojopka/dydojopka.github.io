@@ -30,7 +30,8 @@ html[data-card-theme='paper'] .business-card { color-scheme: light; }
 .business-card li > p { margin-bottom: 6px; }
 .business-card a { color: var(--link); text-underline-offset: 3px; }
 .business-card img { display: block; max-width: 100%; height: auto; margin: 24px 0; }
-.business-card .card-portrait { width: 112px; margin: 0 0 24px; }
+.business-card .card-profile { display: flow-root; }
+.business-card .card-portrait { float: right; width: 112px; max-width: 35%; margin: 0 0 16px clamp(12px, 3vw, 24px); }
 .business-card pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 14px; background: var(--code); }
 .business-card code { font-size: 0.9em; }
 .business-card blockquote { margin-left: 0; padding-left: 18px; border-left: 2px solid #a4afa3; }
