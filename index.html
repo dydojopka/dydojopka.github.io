@@ -74,22 +74,26 @@
     <main id="card">
       <div class="card-service">
         <p id="card-notice" role="status" data-i18n="card.fallback">У сайта есть интерактивная 3D-сцена. Сейчас она недоступна — показана текстовая визитка.</p>
-        <button id="card-return" type="button" hidden data-i18n="card.return">К 3D-визитке</button>
-        <button id="card-theme" type="button" hidden aria-label="Включить светлый лист" title="Включить светлый лист" data-i18n-aria-label="card.lightTheme" data-i18n-title="card.lightTheme">
-          <svg class="theme-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
-          </svg>
-          <svg class="theme-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5a8.5 8.5 0 1 0 10.8 10.8Z" />
-          </svg>
-        </button>
-        <a id="card-language" class="language-switch" data-language-switch href="/en/?view=card" aria-label="Switch to English" title="Switch to English" lang="en">RU</a>
-        <a id="card-download" href="__BUSINESS_CARD_PDF__" download="evgeny-ashroev-business-card.pdf" aria-label="Скачать визитку в PDF" title="Скачать визитку в PDF" data-i18n-aria-label="card.download" data-i18n-title="card.download">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />
-          </svg>
-        </a>
+        <div class="card-toolbar">
+          <button id="card-return" type="button" hidden data-i18n="card.return">К 3D-визитке</button>
+          <div class="card-actions">
+            <button id="card-theme" type="button" hidden aria-label="Включить светлый лист" title="Включить светлый лист" data-i18n-aria-label="card.lightTheme" data-i18n-title="card.lightTheme">
+              <svg class="theme-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
+              </svg>
+              <svg class="theme-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5a8.5 8.5 0 1 0 10.8 10.8Z" />
+              </svg>
+            </button>
+            <a id="card-language" class="language-switch" data-language-switch href="/en/?view=card" aria-label="Switch to English" title="Switch to English" lang="en">RU</a>
+            <a id="card-download" href="__BUSINESS_CARD_PDF__" download="evgeny-ashroev-business-card.pdf" aria-label="Скачать визитку в PDF" title="Скачать визитку в PDF" data-i18n-aria-label="card.download" data-i18n-title="card.download">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />
+              </svg>
+            </a>
+          </div>
+        </div>
       </div>
       <!-- BUSINESS_CARD -->
     </main>
