@@ -1,5 +1,7 @@
 # Dydojopka's business card
 
+[Русский](./README.md) | [English](./README.en.md)
+
 Доступ по ссылке: [dydojopka.github.io](https://dydojopka.github.io/)
 
 ## Запуск
