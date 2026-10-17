@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { t } from './i18n.js';
 
 export function safeHref(value = '') {
   const href = value.trim();
@@ -70,7 +71,7 @@ export function markdownBlocks(tokens) {
   });
 }
 
-export function parseMarkdownFile(path, source, assets = {}, base = '/') {
+export function parseMarkdownFile(path, source, assets = {}, base = '/', locale = 'ru') {
   const normalized = source.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   const metadata = {};
   const frontmatter = normalized.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
@@ -98,17 +99,17 @@ export function parseMarkdownFile(path, source, assets = {}, base = '/') {
   for (const block of blocks) for (const run of block.runs) {
     if (run.type === 'image') run.src = resolveImageSource(run.source, path, assets, base);
   }
-  return { id, title, category: metadata.category ?? (id === 'about' ? 'ЛИЧНАЯ КАРТОЧКА' : 'ПРОЕКТ'), metadata,
+  return { id, title, category: metadata.category ?? t(id === 'about' ? 'markdown.personalCategory' : 'markdown.projectCategory', {}, locale), metadata, locale,
     order: Number.isFinite(Number(metadata.order)) ? Number(metadata.order) : Infinity,
     blocks, contacts, tokens };
 }
 
-export function loadMarkdownFiles(files, assets = {}, base = '/') {
-  const pages = Object.entries(files).map(([path, source]) => parseMarkdownFile(path, source, assets, base));
+export function loadMarkdownFiles(files, assets = {}, base = '/', locale = 'ru') {
+  const pages = Object.entries(files).map(([path, source]) => parseMarkdownFile(path, source, assets, base, locale));
   const about = pages.find((page) => page.id === 'about');
-  if (!about) throw new Error('Добавьте файл content/about.md с информацией о себе.');
-  return { about, projects: pages.filter((page) => page !== about)
-    .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title, 'ru') || a.id.localeCompare(b.id)) };
+  if (!about) throw new Error(t('markdown.missingAbout', {}, locale));
+  return { about, locale, projects: pages.filter((page) => page !== about)
+    .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title, locale) || a.id.localeCompare(b.id)) };
 }
 
 export const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);

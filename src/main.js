@@ -9,9 +9,10 @@ import { monitorView } from './monitor-focus.js';
 import { cameraPose, createFocusTransition } from './focus-transition.js';
 import { printerView } from './printer-focus.js';
 import { createPrinterController } from './printer-controller.js';
-import { createPrinterDisplayPainter, printButtonHit, PRINTER_STATUS } from './printer-display.js';
+import { createPrinterDisplayPainter, printButtonHit, printerStatus } from './printer-display.js';
 import { createBusinessCardTexture, loadBusinessCardImages } from './business-card-painter.js';
-import { about } from './portfolio-content.js';
+import { getPortfolioContent } from './portfolio-content.js';
+import { getLocale, subscribeLocale, t } from './i18n.js';
 import { createPostProcessing } from './post-processing.js';
 import { createRenderLoop } from './render-loop.js';
 import { disposeScene } from './dispose-scene.js';
@@ -27,7 +28,7 @@ import { createKeyboardController } from './keyboard-controller.js';
 import { createKeyboardAudio } from './keyboard-audio.js';
 import { createSceneEffectsAudio } from './scene-effects-audio.js';
 import { createBookController } from './book-controller.js';
-import { BOOK_MESSAGES, createBookDialog } from './book-dialog.js';
+import { getBookMessages, createBookDialog } from './book-dialog.js';
 import { createMonitorInterference } from './monitor-interference.js';
 import { createPlantController } from './plant-controller.js';
 import { createMonitorPromise, PROMISE_MESSAGE } from './monitor-promise.js';
@@ -58,6 +59,9 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   let disposed = false;
   let focus;
   let target = 'room';
+  let desertRevealed = false;
+  let radioStatusMode = 'station';
+  let unsubscribeLocale = () => {};
   let targetsDirty = true;
   let viewport = { width: window.innerWidth, height: window.innerHeight };
   let syncAudioPose = () => {};
@@ -84,7 +88,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     onChange(station) {
       radioDisplay?.setFrequency(station.frequency);
       host.dataset.radioFrequency = station.frequency;
-      radioStatus.textContent = `Частота ${station.frequency}. ${radioAudio.interference ? 'Радиопомехи' : station.title}.`;
+      radioStatusMode = 'station';
+      syncRadioStatus();
       radioAudio.select();
     },
   });
@@ -106,6 +111,24 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
   syncSceneVolumeControl(soundSlider, soundControl, audio.volume, soundMuteButton);
   soundSlider.addEventListener('input', () => audio.setVolume(Number(soundSlider.value) / 100), options);
   soundMuteButton.addEventListener('click', () => audio.toggleMute(), options);
+  function syncRadioStatus() {
+    radioStatus.textContent = radioStatusMode === 'focus'
+      ? t('scene.radioFocus', { frequency: radioController.frequency })
+      : t('scene.radioStatus', { frequency: radioController.frequency, title: radioAudio.interference ? t('scene.station50') : radioController.station.title });
+  }
+  function syncDescription() {
+    const description = t(desertRevealed ? 'scene.hostDesert' : 'scene.hostWinter');
+    host.setAttribute('aria-label', description);
+    renderer?.domElement.setAttribute('aria-label', description);
+  }
+  unsubscribeLocale = subscribeLocale(() => {
+    syncSceneVolumeControl(soundSlider, soundControl, audio.volume, soundMuteButton);
+    syncDescription();
+    syncRadioStatus();
+    status.textContent = printerStatus(printerController?.job ?? 'idle');
+    printerController?.refreshTexture();
+    requestDraw();
+  });
   function activateAudio(event = {}) {
     if (visible && !contextLost && !event.altKey && !event.ctrlKey && !event.metaKey) audio.activate();
   }
@@ -145,6 +168,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     cancelPainting();
     renderLoop?.setMode({ visible: false, animated: false });
     events.abort();
+    unsubscribeLocale();
     deathSequence?.dispose();
     audio.dispose();
     controls?.dispose(); cursor?.dispose();
@@ -224,10 +248,10 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       onReveal() {
         audio.setDesert(true);
         radioAudio.setInterference(true);
-        radioStatus.textContent = `Частота ${radioController.frequency}. Радиопомехи.`;
-        const description = host.getAttribute('aria-label').replace('За окном сильная метель.', 'За окном красная пустыня с вратами, колоннами и разбитым кораблём.');
-        host.setAttribute('aria-label', description);
-        renderer.domElement.setAttribute('aria-label', description);
+        desertRevealed = true;
+        radioStatusMode = 'station';
+        syncRadioStatus();
+        syncDescription();
       },
       onRevealProgress(progress) {
         for (const { light, fromColor, fromIntensity, toColor, toIntensity } of windowLights) {
@@ -294,7 +318,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     cursor = createCursor(host, reducedMotion);
     display = createPrinterDisplayPainter(printer.getObjectByName('printer-display-screen'));
     onProgress('card');
-    await document.fonts?.load('48px "Signalis Dialogue"', [...BOOK_MESSAGES, PROMISE_MESSAGE].join(' ')).catch(() => {});
+    await document.fonts?.load('48px "Signalis Dialogue"', [...getBookMessages('ru'), ...getBookMessages('en'), PROMISE_MESSAGE].join(' ')).catch(() => {});
     monitorPromise = createMonitorPromise({
       screen: screens.primary, light: scene.getObjectByName('monitor-light'), interference: monitorInterference, reducedMotion,
       onChange() { syncInput(); requestDraw(); },
@@ -302,11 +326,11 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     plantController = createPlantController({
       plant, ...plantParts, reducedMotion, onPromise: () => monitorPromise.trigger(),
     });
-    const cardImages = await loadBusinessCardImages(about, import.meta.env.BASE_URL);
+    const cardImages = Object.fromEntries(await Promise.all(['ru', 'en'].map(async (locale) => [locale, await loadBusinessCardImages(getPortfolioContent(locale).about, import.meta.env.BASE_URL)])));
     if (contextLost || disposed) throw new Error('Графический контекст потерян во время подготовки визитки.');
     printerController = createPrinterController({
       printer, scene, camera, reducedMotion,
-      prepareTexture: () => createBusinessCardTexture(about, () => document.createElement('canvas'), cardImages),
+      prepareTexture: () => createBusinessCardTexture(getPortfolioContent().about, () => document.createElement('canvas'), { ...cardImages[getLocale()], locale: getLocale() }),
       onPickup: (position) => paperAudio.play('page', position),
       onRead: onCard,
       onChange(state) {
@@ -314,7 +338,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         host.dataset.printState = state.job;
         audio.setPrinting(['feeding', 'printing', 'ejecting'].includes(state.job));
         host.dataset.paperState = state.paper;
-        status.textContent = PRINTER_STATUS[state.job];
+        status.textContent = printerStatus(state.job);
         display.paint(state.job);
         renderer.shadowMap.needsUpdate = true;
         syncInput(); requestDraw();
@@ -374,7 +398,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       target = nextTarget;
       if (target === 'radio') {
         host.focus({ preventScroll: true });
-        radioStatus.textContent = `Радиоприёмник. Частота ${radioController.frequency}. Enter — следующая станция. Escape — к столу.`;
+        radioStatusMode = 'focus';
+        syncRadioStatus();
       }
       return focus.enter();
     }
@@ -602,9 +627,10 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
     host.dataset.focusTarget = host.dataset.focusState = host.dataset.monitorState = 'room';
     host.dataset.printState = 'idle'; host.dataset.paperState = 'input';
     host.dataset.paintingState = 'shelf';
-    status.textContent = PRINTER_STATUS.idle;
+    status.textContent = printerStatus('idle');
     host.dataset.radioFrequency = radioController.frequency;
-    radioStatus.textContent = `Частота ${radioController.frequency}. Радиопомехи.`;
+    syncRadioStatus();
+    syncDescription();
     renderer.shadowMap.needsUpdate = true;
     resize(); syncInput();
     onProgress('shaders');

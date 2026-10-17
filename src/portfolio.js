@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { about, profile, projects } from './portfolio-content.js';
+import { getPortfolioContent } from './portfolio-content.js';
+import { getLocale, subscribeLocale, t } from './i18n.js';
 import { blocksHtml, runsHtml } from './markdown.js';
 import { createPortfolioPainter } from './portfolio-painter.js';
 import { SCREEN_WIDTH, SCREEN_HEIGHT, MENU_ROW, MENU_TOP, MENU_BOTTOM, screenAction } from './portfolio-layout.js';
@@ -11,6 +12,7 @@ const htmlText = (text) => runsHtml([{ text }]);
 const actionKey = (action) => action ? `${action.type}:${action.id ?? action.href ?? ''}` : '';
 
 export function createPortfolio({ host }) {
+  let { about, profile, projects } = getPortfolioContent();
   const events = new AbortController();
   const listen = (target, name, handler, options = {}) => target.addEventListener(name, handler, { ...options, signal: events.signal });
   const canvas = document.createElement('canvas');
@@ -37,7 +39,10 @@ export function createPortfolio({ host }) {
   let pointerDown;
   let imageRevision = 0;
   const images = new Map();
-  const imageRuns = [about, ...projects].flatMap((page) => page.blocks.flatMap((block) => block.runs));
+  const imageRuns = ['ru', 'en'].flatMap((locale) => {
+    const { about, projects } = getPortfolioContent(locale);
+    return [about, ...projects];
+  }).flatMap((page) => page.blocks.flatMap((block) => block.runs));
   function imageChanged() {
     imageRevision++;
     paint();
@@ -58,6 +63,7 @@ export function createPortfolio({ host }) {
   notice.hidden = true;
   document.body.append(notice);
   let noticeTimer;
+  let noticeKey;
   const portrait = new Image();
   portrait.src = `${import.meta.env.BASE_URL}${profile.photo.replace(/^\//, '')}`;
   listen(portrait, 'load', paint);
@@ -66,18 +72,21 @@ export function createPortfolio({ host }) {
   const reader = document.createElement('section');
   reader.id = 'portfolio-reader';
   reader.className = 'portfolio-reader screen-access';
-  reader.setAttribute('aria-label', 'Визитка на мониторе');
+  reader.setAttribute('aria-label', t('scene.monitorLabel'));
   reader.inert = true;
-  reader.innerHTML = `<div class="terminal-window">
+  function renderReader() {
+    reader.setAttribute('aria-label', t('scene.monitorLabel'));
+    reader.lang = getLocale();
+    reader.innerHTML = `<div class="terminal-window">
     <header class="terminal-titlebar"><span>${htmlText(profile.handle)}@workstation: ~/portfolio</span></header>
     <div class="terminal-body">
-      <nav class="terminal-nav" aria-label="Визитка и проекты">
-        <button type="button" class="terminal-home" data-project="about">↖ Обо мне</button>
-        <p class="terminal-label">ПРОЕКТЫ / ${String(projects.length).padStart(2, '0')}</p>
+      <nav class="terminal-nav" aria-label="${htmlText(t('scene.portfolioNav'))}">
+        <button type="button" class="terminal-home" data-project="about">↖ ${htmlText(t('scene.about'))}</button>
+        <p class="terminal-label">${htmlText(t('scene.projects'))} / ${String(projects.length).padStart(2, '0')}</p>
         <div class="terminal-projects">${projects.map((project, index) => `<button type="button" data-project="${htmlText(project.id)}"><span class="project-number">${String(index + 1).padStart(2, '0')}</span>${htmlText(project.title)}</button>`).join('')}</div>
       </nav>
-      <article class="terminal-article" tabindex="0" aria-label="Содержание выбранного раздела"></article>
-      <aside class="terminal-profile" aria-label="Фото и контакты"><p class="terminal-label">ПРОФИЛЬ / 001</p>
+      <article class="terminal-article" tabindex="0" aria-label="${htmlText(t('scene.contentLabel'))}"></article>
+      <aside class="terminal-profile" aria-label="${htmlText(t('scene.profileLabel'))}"><p class="terminal-label">${htmlText(t('scene.profile'))}</p>
         <div class="terminal-portrait"><img src="${htmlText(portrait.src)}" alt="${htmlText(profile.name)}" width="809" height="1078" /></div>
         <p class="terminal-handle">@${htmlText(profile.handle)}</p>
         <div class="terminal-contacts">${profile.contacts.map((contact) => `<a href="${htmlText(contact.href)}" ${/^https?:/.test(contact.href) ? 'target="_blank" rel="noopener noreferrer"' : ''}><span>${htmlText(contact.label)} ${contact.href.startsWith('mailto:') ? '⧉' : '↗'}</span><span>${htmlText(contact.value)}</span></a>`).join('')}</div>
@@ -85,8 +94,11 @@ export function createPortfolio({ host }) {
     </div>
     <footer class="terminal-status"><span class="terminal-current"></span></footer>
   </div>`;
+    article = reader.querySelector('.terminal-article');
+  }
+  let article;
+  renderReader();
   document.body.append(reader);
-  const article = reader.querySelector('.terminal-article');
   const leaveButton = host.querySelector('#leave-monitor');
   listen(leaveButton, 'click', () => leave());
 
@@ -159,7 +171,7 @@ export function createPortfolio({ host }) {
     });
     ({ regions, contentRect, contentHeight } = painting);
     textLayer.setContent(compact && menuOpen ? [] : painting.selectableItems,
-      `${selected}:${compact}:${menuOpen}:${contentScroll}:${imageRevision}`);
+      `${getLocale()}:${selected}:${compact}:${menuOpen}:${contentScroll}:${imageRevision}`);
     textLayer.update(screen, camera, focused && enabled);
     texture.needsUpdate = true;
     notify();
@@ -172,7 +184,8 @@ export function createPortfolio({ host }) {
   }
   async function copyContact(href) {
     const copied = await copyEmail(href);
-    notice.textContent = copied ? 'Email скопирован' : 'Не удалось скопировать email';
+    noticeKey = copied ? 'scene.emailCopied' : 'scene.emailCopyFailed';
+    notice.textContent = t(noticeKey);
     notice.hidden = false;
     clearTimeout(noticeTimer);
     noticeTimer = setTimeout(() => { notice.hidden = true; }, 2200);
@@ -233,6 +246,21 @@ export function createPortfolio({ host }) {
   }, { passive: false });
   renderContent();
   paint();
+  const unsubscribeLocale = subscribeLocale(() => {
+    const articleScroll = article.scrollTop;
+    const active = document.activeElement;
+    const activeProject = reader.contains(active) ? active.dataset.project : undefined;
+    const articleFocused = active === article;
+    ({ about, profile, projects } = getPortfolioContent());
+    painter.setContent({ profile, projects });
+    renderReader();
+    renderContent();
+    article.scrollTop = articleScroll;
+    if (focused && articleFocused) article.focus({ preventScroll: true });
+    else if (focused && activeProject) reader.querySelector(`[data-project="${activeProject}"]`)?.focus({ preventScroll: true });
+    if (noticeKey) notice.textContent = t(noticeKey);
+    paint();
+  });
   return {
     texture,
     attach(options) { ({ screen, camera, getHit, onChange: notify, onLeave: leave } = options); },
@@ -265,6 +293,7 @@ export function createPortfolio({ host }) {
     },
     dispose() {
       events.abort();
+      unsubscribeLocale();
       clearTimeout(noticeTimer);
       textLayer.dispose();
       reader.remove(); notice.remove(); texture.dispose();

@@ -1,7 +1,9 @@
-export const BOOK_MESSAGES = [
-  'На столе лежит книга. Кажется, она очень древняя.',
-  'Она словно зовёт меня.',
-];
+import { getLocale, subscribeLocale, t } from './i18n.js';
+
+export function getBookMessages(locale = getLocale()) {
+  return [t('scene.bookMessage1', {}, locale), t('scene.bookMessage2', {}, locale)];
+}
+export const BOOK_MESSAGES = getBookMessages('ru');
 const LETTER_DELAY = 45;
 
 export function createBookDialog({
@@ -11,7 +13,7 @@ export function createBookDialog({
   const events = new AbortController();
   const dialog = document.createElement('dialog');
   dialog.className = 'book-dialog';
-  dialog.setAttribute('aria-label', 'Книга');
+  dialog.setAttribute('aria-label', t('scene.book'));
   dialog.setAttribute('aria-describedby', 'book-dialog-message');
   dialog.setAttribute('tabindex', '-1');
   const line = document.createElement('p');
@@ -30,6 +32,7 @@ export function createBookDialog({
   document.body.append(dialog);
   dialog.addEventListener('cancel', (event) => event.preventDefault(), { signal: events.signal });
   dialog.addEventListener('keydown', (event) => event.stopPropagation(), { signal: events.signal });
+  let messages = getBookMessages();
   let opened = false, active = true, disposed = false;
   let page = 0, length = 0, ready = false, timer, deadline = 0, remaining = LETTER_DELAY, revision = 0;
   let previousFocus, pointerDown;
@@ -47,7 +50,7 @@ export function createBookDialog({
     const pressed = pointerDown; pointerDown = undefined;
     if (!pressed || !opened || !active || event.button !== 0) return;
     if (!ready) finishTyping();
-    else if (page + 1 < BOOK_MESSAGES.length) { page++; beginPage(); schedule(); }
+    else if (page + 1 < messages.length) { page++; beginPage(); schedule(); }
     else close();
   }, { signal: events.signal });
 
@@ -66,7 +69,7 @@ export function createBookDialog({
       if (!opened || ready || !active || disposed) return;
       length++;
       paintText();
-      ready = length === [...BOOK_MESSAGES[page]].length;
+      ready = length === [...messages[page]].length;
       arrow.hidden = !ready;
       dialog.dataset.state = ready ? 'reading' : 'typing';
       remaining = LETTER_DELAY;
@@ -74,10 +77,10 @@ export function createBookDialog({
     }, remaining);
   }
   function beginPage() {
-    length = reducedMotion.matches ? [...BOOK_MESSAGES[page]].length : 0;
+    length = reducedMotion.matches ? [...messages[page]].length : 0;
     ready = reducedMotion.matches;
     paintText();
-    accessible.textContent = BOOK_MESSAGES[page];
+    accessible.textContent = messages[page];
     arrow.hidden = !ready;
     dialog.dataset.page = String(page + 1);
     dialog.dataset.state = ready ? 'reading' : 'typing';
@@ -92,11 +95,22 @@ export function createBookDialog({
     previousFocus = undefined;
   }
   function paintText() {
-    const letters = [...BOOK_MESSAGES[page]];
+    const letters = [...messages[page]];
     text.textContent = letters.slice(0, length).join('');
     // Reserve the unrevealed words so line breaks never jump during typing.
     remainder.textContent = letters.slice(length).join('');
   }
+  const unsubscribeLocale = subscribeLocale(() => {
+    const progress = length / [...messages[page]].length;
+    messages = getBookMessages();
+    dialog.setAttribute('aria-label', t('scene.book'));
+    dialog.lang = getLocale();
+    length = ready ? [...messages[page]].length : Math.floor(progress * [...messages[page]].length);
+    if (opened) {
+      paintText();
+      accessible.textContent = messages[page];
+    }
+  });
   return {
     get open() { return opened; },
     show() {
@@ -121,14 +135,14 @@ export function createBookDialog({
     dispose() {
       if (disposed) return;
       close({ restoreFocus: false });
-      disposed = true; events.abort(); cancelTimer(); dialog.remove();
+      disposed = true; unsubscribeLocale(); events.abort(); cancelTimer(); dialog.remove();
     },
   };
 
   function finishTyping() {
     if (!opened) return;
     cancelTimer();
-    length = [...BOOK_MESSAGES[page]].length; ready = true;
+    length = [...messages[page]].length; ready = true;
     paintText(); arrow.hidden = false;
     dialog.dataset.state = 'reading'; remaining = LETTER_DELAY;
   }

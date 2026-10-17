@@ -23,6 +23,8 @@ html[data-mode='scene'], html[data-mode='scene'] body { width: 100%; height: 100
 .scene-sound input::-moz-range-thumb { width: 6px; height: 12px; border: 0; border-radius: 0; background: #b6c4b9; }
 .scene-sound input:focus-visible, .scene-sound button:focus-visible { outline: 1px dashed #a3ffb7; outline-offset: 1px; }
 .scene-sound:hover { color: #b6c4b9; }
+.scene-sound .language-switch { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 44px; padding-left: 10px; border-left: 1px solid #46574d; color: inherit; font-size: 12px; cursor: pointer; }
+.scene-sound .language-switch:focus-visible { outline: 1px dashed #a3ffb7; outline-offset: 1px; }
 .mobile-return { display: none; }
 @media (max-width: 700px), (pointer: coarse) { .mobile-return { display: block; } }
 @media (max-width: 600px) {

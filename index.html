@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101815" />
-    <meta name="description" content="Евгений Ашроев — студент ИМИТ ИГУ. Python, терминальные приложения, веб-интерфейсы и проекты в интерактивной 3D-визитке." />
+    <meta name="description" content="Евгений Ашроев — студент ИМИТ ИГУ. Python, терминальные приложения, веб-интерфейсы и проекты в интерактивной 3D-визитке." data-i18n-content="page.description" />
     <title>Evgeny Ashroev</title>
     <script>
       document.documentElement.dataset.mode = new URL(location.href).searchParams.get('view') === 'card' ? 'card' : 'loading';
@@ -23,58 +23,59 @@
     <section id="scene-loading" class="boot-screen" tabindex="-1" aria-labelledby="loading-title" data-state="loading">
       <header class="boot-header">
         <h1 id="loading-title">WT KERNEL / PERSONAL WORKSTATION</h1>
-        <p>Терминал личного профиля: Евгений Ашроев</p>
-        <p>Устройство ввода: клавиатура / мышь / касание</p>
+        <p data-i18n="loading.profile">Терминал личного профиля: Евгений Ашроев</p>
+        <p data-i18n="loading.input">Устройство ввода: клавиатура / мышь / касание</p>
       </header>
-      <ol class="boot-log" aria-label="Подготовка системы">
-        <li data-boot-line data-stage="modules" data-state="active"><span>Загрузка модулей интерфейса</span><span class="boot-result">[ … ]</span></li>
-        <li data-boot-line data-stage="graphics" data-state="pending" hidden><span>Инициализация графического устройства</span><span class="boot-result">[ — ]</span></li>
-        <li data-boot-line data-stage="environment" data-state="pending" hidden><span>Загрузка геометрии, текстур и окружения</span><span class="boot-result">[ — ]</span></li>
-        <li data-boot-line data-stage="card" data-state="pending" hidden><span>Чтение профиля и каталога проектов</span><span class="boot-result">[ — ]</span></li>
-        <li data-boot-line data-stage="shaders" data-state="pending" hidden><span>Подготовка графической среды</span><span class="boot-result">[ — ]</span></li>
+      <ol class="boot-log" aria-label="Подготовка системы" data-i18n-aria-label="loading.system">
+        <li data-boot-line data-stage="modules" data-state="active"><span data-i18n="loading.modules">Загрузка модулей интерфейса</span><span class="boot-result">[ … ]</span></li>
+        <li data-boot-line data-stage="graphics" data-state="pending" hidden><span data-i18n="loading.graphics">Инициализация графического устройства</span><span class="boot-result">[ — ]</span></li>
+        <li data-boot-line data-stage="environment" data-state="pending" hidden><span data-i18n="loading.environment">Загрузка геометрии, текстур и окружения</span><span class="boot-result">[ — ]</span></li>
+        <li data-boot-line data-stage="card" data-state="pending" hidden><span data-i18n="loading.card">Чтение профиля и каталога проектов</span><span class="boot-result">[ — ]</span></li>
+        <li data-boot-line data-stage="shaders" data-state="pending" hidden><span data-i18n="loading.shaders">Подготовка графической среды</span><span class="boot-result">[ — ]</span></li>
       </ol>
-      <progress id="loading-progress" class="boot-access" value="0" max="5" aria-label="Подготовленные этапы загрузки"></progress>
+      <progress id="loading-progress" class="boot-access" value="0" max="5" aria-label="Подготовленные этапы загрузки" data-i18n-aria-label="loading.progress"></progress>
       <section class="boot-legal" aria-labelledby="loading-legal-title">
-        <h2 id="loading-legal-title" data-boot-line hidden>Чтение правового уведомления:</h2>
+        <h2 id="loading-legal-title" data-boot-line hidden data-i18n="loading.legal">Чтение правового уведомления:</h2>
         <!-- BOOT_DISCLAIMER -->
       </section>
       <footer class="boot-footer">
-        <p id="loading-status" role="status" aria-live="polite" aria-atomic="true">Загрузка модулей интерфейса…</p>
-        <button id="loading-continue" type="button" disabled hidden><span aria-hidden="true">&gt; </span><span id="loading-prompt">Ожидание готовности системы</span></button>
+        <p id="loading-status" role="status" aria-live="polite" aria-atomic="true" data-i18n="loading.stage.modules">Загрузка модулей интерфейса…</p>
+        <button id="loading-continue" type="button" disabled hidden><span aria-hidden="true">&gt; </span><span id="loading-prompt" data-i18n="loading.wait">Ожидание готовности системы</span></button>
       </footer>
     </section>
-    <section id="room" hidden inert tabindex="0" aria-describedby="view-help" aria-label="Трёхмерная сцена: рабочий стол с ЭЛТ-монитором, клавиатурой, принтером, радиоприёмником, растением и лампой в ночной комнате. За окном сильная метель.">
-      <div id="scene-sound-control" class="scene-sound" hidden data-muted="false" title="Громкость звука" style="--sound-level: 50%">
-        <button id="scene-sound-mute" type="button" aria-label="Выключить звук" title="Выключить звук" aria-pressed="false">
+    <section id="room" hidden inert tabindex="0" aria-describedby="view-help" aria-label="Трёхмерная сцена: рабочий стол с ЭЛТ-монитором, клавиатурой, принтером, радиоприёмником, растением и лампой в ночной комнате. За окном сильная метель." data-i18n-aria-label="scene.hostWinter">
+      <div id="scene-sound-control" class="scene-sound" hidden data-muted="false" title="Громкость звука" data-i18n-title="page.volume" style="--sound-level: 50%">
+        <button id="scene-sound-mute" type="button" aria-label="Выключить звук" title="Выключить звук" aria-pressed="false" data-i18n-aria-label="page.mute" data-i18n-title="page.mute">
           <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square" stroke-linejoin="miter">
             <path d="M3 8h3l4-3v10l-4-3H3Z" />
             <path class="sound-wave" d="M13 7c2 2 2 4 0 6m2-8c3 3 3 7 0 10" />
             <path class="sound-muted" d="m13 8 4 4m0-4-4 4" />
           </svg>
         </button>
-        <input id="scene-sound" type="range" min="0" max="100" step="1" value="50" autocomplete="off" aria-label="Громкость звука" aria-valuetext="50%" />
+        <input id="scene-sound" type="range" min="0" max="100" step="1" value="50" autocomplete="off" aria-label="Громкость звука" data-i18n-aria-label="page.volume" aria-valuetext="50%" />
+        <a id="scene-language" class="language-switch" data-language-switch href="/en/?view=card" aria-label="Switch to English" title="Switch to English" lang="en">RU</a>
       </div>
       <div class="view-controls" hidden>
         <p id="view-help"></p>
-        <button id="leave-radio" class="mobile-return" type="button" hidden>К столу</button>
-        <button id="leave-painting" class="mobile-return" type="button" hidden>На полку</button>
+        <button id="leave-radio" class="mobile-return" type="button" hidden data-i18n="page.desk">К столу</button>
+        <button id="leave-painting" class="mobile-return" type="button" hidden data-i18n="page.shelf">На полку</button>
       </div>
       <p id="radio-status" class="screen-access" role="status" aria-live="polite" aria-atomic="true"></p>
       <div class="monitor-controls" hidden>
-        <p>Прокрутка — колесо / свайп · Назад — Esc / Home</p>
-        <button id="leave-monitor" class="mobile-return" type="button">К столу</button>
+        <p data-i18n="page.monitorHelp">Прокрутка — колесо / свайп · Назад — Esc / Home</p>
+        <button id="leave-monitor" class="mobile-return" type="button" data-i18n="page.desk">К столу</button>
       </div>
       <div class="printer-controls" hidden>
-        <p>Управление — нажатие / Enter · Назад — Esc / Home</p>
+        <p data-i18n="page.printerHelp">Управление — нажатие / Enter · Назад — Esc / Home</p>
         <p id="printer-status" class="screen-access" role="status"></p>
-        <button id="leave-printer" class="mobile-return" type="button">К столу</button>
+        <button id="leave-printer" class="mobile-return" type="button" data-i18n="page.desk">К столу</button>
       </div>
     </section>
     <main id="card">
       <div class="card-service">
-        <p id="card-notice" role="status">У сайта есть интерактивная 3D-сцена. Сейчас она недоступна — показана текстовая визитка.</p>
-        <button id="card-return" type="button" hidden>К 3D-визитке</button>
-        <button id="card-theme" type="button" hidden aria-label="Включить светлый лист" title="Включить светлый лист">
+        <p id="card-notice" role="status" data-i18n="card.fallback">У сайта есть интерактивная 3D-сцена. Сейчас она недоступна — показана текстовая визитка.</p>
+        <button id="card-return" type="button" hidden data-i18n="card.return">К 3D-визитке</button>
+        <button id="card-theme" type="button" hidden aria-label="Включить светлый лист" title="Включить светлый лист" data-i18n-aria-label="card.lightTheme" data-i18n-title="card.lightTheme">
           <svg class="theme-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <circle cx="12" cy="12" r="4" />
             <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
@@ -83,7 +84,8 @@
             <path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5a8.5 8.5 0 1 0 10.8 10.8Z" />
           </svg>
         </button>
-        <a id="card-download" href="__BUSINESS_CARD_PDF__" download="evgeny-ashroev-business-card.pdf" aria-label="Скачать визитку в PDF" title="Скачать визитку в PDF">
+        <a id="card-language" class="language-switch" data-language-switch href="/en/?view=card" aria-label="Switch to English" title="Switch to English" lang="en">RU</a>
+        <a id="card-download" href="__BUSINESS_CARD_PDF__" download="evgeny-ashroev-business-card.pdf" aria-label="Скачать визитку в PDF" title="Скачать визитку в PDF" data-i18n-aria-label="card.download" data-i18n-title="card.download">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />
           </svg>
@@ -92,12 +94,12 @@
       <!-- BUSINESS_CARD -->
     </main>
     <footer class="site-legal">
-      <a id="license-trigger" href="#license-disclaimer" aria-label="Лицензия и дисклеймер">© Лицензия</a>
+      <a id="license-trigger" href="#license-disclaimer" aria-label="Лицензия и дисклеймер" data-i18n="legal.link" data-i18n-aria-label="legal.title">© Лицензия</a>
       <dialog id="license-disclaimer" open aria-labelledby="license-title">
         <header class="license-header">
-          <h2 id="license-title">Лицензия и дисклеймер</h2>
+          <h2 id="license-title" data-i18n="legal.title">Лицензия и дисклеймер</h2>
           <form id="license-close" method="dialog" hidden>
-            <button type="submit" autofocus>Закрыть</button>
+            <button type="submit" autofocus data-i18n="legal.close">Закрыть</button>
           </form>
         </header>
         <!-- LICENSE_DISCLAIMER -->

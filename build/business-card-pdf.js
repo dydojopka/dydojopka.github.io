@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import pdfmake from 'pdfmake';
 import { inlineRuns, safeHref } from '../src/markdown.js';
+import { t } from '../src/i18n.js';
 
 const require = createRequire(import.meta.url);
 const fonts = Object.fromEntries(Object.entries({
@@ -11,7 +12,8 @@ pdfmake.addFonts({ Roboto: fonts });
 pdfmake.setLocalAccessPolicy((path) => Object.values(fonts).includes(path));
 pdfmake.setUrlAccessPolicy(() => false);
 
-export function businessCardPdfDefinition({ about, projects }, { portrait, images = {} } = {}) {
+export function businessCardPdfDefinition({ about, projects, locale: contentLocale }, { portrait, images = {}, locale = contentLocale ?? 'ru' } = {}) {
+  const english = locale === 'en';
   function pdfRun(run) {
     return {
       text: run.text.replace(/↗/g, '').replace(/[\u2010-\u2015]/g, '-'),
@@ -23,7 +25,7 @@ export function businessCardPdfDefinition({ about, projects }, { portrait, image
   function richText(tokens) {
     return inlineRuns(tokens).map(pdfRun);
   }
-  function markdown(page, headingOffset = 0) {
+  function markdown(page, headingOffset = 0, endOfDocument = false) {
     const imageUrls = new Map(page.blocks.flatMap((block) => block.runs)
       .filter((run) => run.type === 'image').map((run) => [run.source, run.src]));
     function render(tokens) {
@@ -61,11 +63,15 @@ export function businessCardPdfDefinition({ about, projects }, { portrait, image
         return nodes;
       });
     }
-    return render(page.tokens);
+    const nodes = render(page.tokens);
+    // A final paragraph margin can overflow by itself and create a blank page.
+    if (endOfDocument && nodes.at(-1)?.margin) nodes.at(-1).margin[3] = 0;
+    return nodes;
   }
   return {
-    pageSize: 'A4', pageMargins: [44, 42, 44, 42], language: 'ru-RU',
-    info: { title: `${about.title} - визитка`, author: about.title, subject: 'Профиль, контакты и проекты' },
+    pageSize: 'A4', pageMargins: [44, 42, 44, 42], language: english ? 'en-US' : 'ru-RU',
+    info: { title: t('pdf.title', { name: about.title }, locale), author: about.title,
+      subject: t('pdf.subject', {}, locale) },
     defaultStyle: { font: 'Roboto', fontSize: 11.5, lineHeight: 1.25, color: '#252922' },
     styles: {
       title: { fontSize: 28, bold: true, margin: [0, 0, 0, 20] },
@@ -76,14 +82,14 @@ export function businessCardPdfDefinition({ about, projects }, { portrait, image
       { text: about.title, style: 'title', headlineLevel: 1 },
       ...(portrait ? [{ image: portrait, width: 84, margin: [0, 0, 0, 18] }] : []),
       ...markdown(about),
-      { text: 'Контакты', style: 'heading', headlineLevel: 2 },
+      { text: t('card.contacts', {}, locale), style: 'heading', headlineLevel: 2 },
       { ul: about.contacts.map((contact) => ({ text: [
         { text: contact.label, link: contact.href, color: '#245044', decoration: 'underline' },
         { text: `: ${contact.value}` },
       ], margin: [0, 0, 0, 5] })) },
       ...projects.map((page, index) => ({
         id: `project-${page.id}`, ...(index === 0 ? { pageBreak: 'before' } : {}),
-        stack: [{ text: page.title, style: 'heading', headlineLevel: 2 }, ...markdown(page, 1)],
+        stack: [{ text: page.title, style: 'heading', headlineLevel: 2 }, ...markdown(page, 1, index === projects.length - 1)],
       })),
     ],
     pageBreakBefore: (node, container) => {

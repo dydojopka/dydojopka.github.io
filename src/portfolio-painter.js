@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { layoutMarkdown, runFont, TERMINAL_FONT } from './markdown-layout.js';
 import { SCREEN_WIDTH, SCREEN_HEIGHT, MENU_ROW, MENU_TOP, MENU_BOTTOM, menuRegions } from './portfolio-layout.js';
 
@@ -73,7 +74,7 @@ export function createPortfolioPainter(canvas, { profile, projects, images, port
         } else {
           ctx.strokeStyle = COLORS.border;
           ctx.strokeRect(x, y, item.width, item.height);
-          text(item.text || 'Изображение', x + 12, y + size + 12, size, COLORS.muted);
+          text(item.text || t('scene.image'), x + 12, y + size + 12, size, COLORS.muted);
         }
         if (interactive && item.href) {
           regions.push({
@@ -138,8 +139,8 @@ export function createPortfolioPainter(canvas, { profile, projects, images, port
     text(`${profile.handle}@workstation: ~/portfolio`, 48, 69, compact ? 32 : 28, COLORS.bright);
     button({ x: 1300, y: 26, width: 90, height: 66, type: 'close' }, '×', 30);
     if (compact) {
-      button({ x: 48, y: 124, width: 420, height: 138, type: 'select', id: 'about' }, '↖ ОБО МНЕ', 48, selected === 'about');
-      button({ x: 500, y: 124, width: 892, height: 138, type: 'menu' }, `ПРОЕКТЫ / ${String(projects.length).padStart(2, '0')} ${menuOpen ? '▴' : '▾'}`, 48, menuOpen);
+      button({ x: 48, y: 124, width: 420, height: 138, type: 'select', id: 'about' }, `↖ ${t('scene.about').toLocaleUpperCase()}`, 48, selected === 'about');
+      button({ x: 500, y: 124, width: 892, height: 138, type: 'menu' }, `${t('scene.projects')} / ${String(projects.length).padStart(2, '0')} ${menuOpen ? '▴' : '▾'}`, 48, menuOpen);
       photo(1192, 286, 180, 240);
       selectableText(page.category, 60, 319, 27, COLORS.muted);
       markdown([{ type: 'heading', depth: 1, runs: [{ text: page.title }] }], { x: 60, y: 348, width: 1100, height: 162 }, 58);
@@ -157,21 +158,21 @@ export function createPortfolioPainter(canvas, { profile, projects, images, port
     } else {
       panel(400, 120, 646, 870);
       panel(1068, 120, 324, 870);
-      button({ x: 48, y: 132, width: 320, height: 76, type: 'select', id: 'about' }, '↖ ОБО МНЕ', 27, selected === 'about');
-      text(`ПРОЕКТЫ / ${String(projects.length).padStart(2, '0')}`, 62, 252, 22, COLORS.muted);
+      button({ x: 48, y: 132, width: 320, height: 76, type: 'select', id: 'about' }, `↖ ${t('scene.about').toLocaleUpperCase()}`, 27, selected === 'about');
+      text(`${t('scene.projects')} / ${String(projects.length).padStart(2, '0')}`, 62, 252, 22, COLORS.muted);
       for (const region of menuRegions(projects, menuScroll)) {
         const project = projects.find((project) => project.id === region.id);
         button(region, project.title, 24, selected === region.id);
       }
       scrollbar({ x: 48, y: MENU_TOP, width: 320, height: MENU_BOTTOM - MENU_TOP }, projects.length * MENU_ROW - 8, menuScroll);
-      text('ЛИЧНЫЕ И УЧЕБНЫЕ', 62, 932, 20, COLORS.muted);
-      text('ПРОЕКТЫ НА GITHUB', 62, 962, 20, COLORS.muted);
+      text(t('scene.personalProjects'), 62, 932, 20, COLORS.muted);
+      text(t('scene.projectsGithub'), 62, 962, 20, COLORS.muted);
       selectableText(page.category, 430, 166, 19, COLORS.muted);
       const titleHeight = markdown([{ type: 'heading', depth: 1, runs: [{ text: page.title }] }], { x: 430, y: 198, width: 584, height: 170 }, 36);
       contentRect = { x: 430, y: 198 + titleHeight + 16, width: 584, height: 950 - 198 - titleHeight - 16 };
       contentHeight = markdown(page.blocks, contentRect, 24, contentScroll, true);
       scrollbar(contentRect, contentHeight, contentScroll);
-      text('ПРОФИЛЬ / 001', 1090, 160, 20, COLORS.muted);
+      text(t('scene.profile'), 1090, 160, 20, COLORS.muted);
       photo(1090, 188, 280, 373);
       selectableText(`@${profile.handle}`, 1090, 598, 26, COLORS.bright);
       profile.contacts.forEach((contact, index) => {
@@ -187,5 +188,5 @@ export function createPortfolioPainter(canvas, { profile, projects, images, port
     return { regions, selectableItems, contentRect, contentHeight };
   }
 
-  return { paint };
+  return { paint, setContent(content) { ({ profile, projects } = content); } };
 }

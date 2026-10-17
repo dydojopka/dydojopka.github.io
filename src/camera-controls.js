@@ -1,3 +1,5 @@
+import { subscribeLocale, t } from './i18n.js';
+
 const DEG = Math.PI / 180;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const KEY_DIRECTIONS = {
@@ -102,15 +104,15 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
   function updateHelp() {
     if (helpTarget === 'painting') {
       help.textContent = coarsePointer.matches
-        ? 'Вращение — перетаскивание · Назад — нажатие вне картины'
-        : 'Вращение — перетаскивание · На полку — клик вне картины / Esc / Home';
+        ? t('scene.helpPaintingTouch')
+        : t('scene.helpPainting');
       return;
     }
     help.textContent = helpTarget === 'radio'
-      ? coarsePointer.matches ? 'Станция — нажатие'
-        : 'Станция — клик / Enter · К столу — Esc / Home'
-      : coarsePointer.matches ? 'Осмотр — свайп · Выбор — нажатие'
-        : 'Осмотр — курсор / ↑←↓→ / WASD · Выбор — клик / P / M / R · Сброс — Home';
+      ? coarsePointer.matches ? t('scene.helpRadioTouch')
+        : t('scene.helpRadio')
+      : coarsePointer.matches ? t('scene.helpRoomTouch')
+        : t('scene.helpRoom');
   }
 
   host.addEventListener('pointerdown', (event) => {
@@ -145,7 +147,7 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
   }
   host.addEventListener('pointerleave', () => { if (!drag) stop(); }, options);
   host.addEventListener('keydown', (event) => {
-    if (!enabled || !profile || event.target.closest('input') || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (!enabled || !profile || event.target.closest('input, button, a') || event.altKey || event.ctrlKey || event.metaKey) return;
     const direction = keyboardDirection(event);
     if (event.key === 'Home') {
       event.preventDefault();
@@ -161,6 +163,7 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
   document.addEventListener('visibilitychange', stop, options);
   reducedMotion.addEventListener('change', () => { stop(); updateHelp(); }, options);
   coarsePointer.addEventListener('change', updateHelp, options);
+  const unsubscribeLocale = subscribeLocale(updateHelp);
   updateHelp();
   controls.hidden = false;
 
@@ -196,6 +199,7 @@ export function createCameraControls({ host, camera, reducedMotion, onChange }) 
     dispose() {
       stop();
       events.abort();
+      unsubscribeLocale();
       controls.hidden = true;
     },
   };

@@ -1,7 +1,7 @@
 import { createLoadingScreen } from './loading-screen.js';
+import { subscribeLocale, t } from './i18n.js';
 
 const HISTORY_KEY = 'workstationCard';
-const FALLBACK_NOTICE = 'У сайта есть интерактивная 3D-сцена. Сейчас она недоступна — показана текстовая визитка.';
 
 export function modeUrl(href, card) {
   const url = new URL(href);
@@ -15,7 +15,6 @@ export function createCardMode({ window, document, loadRuntime, onModeChange = (
   const card = document.querySelector('#card');
   const notice = document.querySelector('#card-notice');
   const button = document.querySelector('#card-return');
-  const title = document.querySelector('#card-title');
   const loader = document.querySelector('#scene-loading');
   const themeButton = document.querySelector('#card-theme');
   const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
@@ -47,7 +46,7 @@ export function createCardMode({ window, document, loadRuntime, onModeChange = (
   function theme() {
     const value = manualTheme ?? (reason === 'fallback' || (reason === 'direct' && systemTheme.matches) ? 'dark' : 'paper');
     document.documentElement.dataset.cardTheme = value;
-    const label = value === 'dark' ? 'Включить светлый лист' : 'Включить тёмную тему';
+    const label = t(value === 'dark' ? 'card.lightTheme' : 'card.darkTheme');
     themeButton.setAttribute('aria-label', label);
     themeButton.setAttribute('title', label);
   }
@@ -68,11 +67,11 @@ export function createCardMode({ window, document, loadRuntime, onModeChange = (
     button.hidden = false;
     themeButton.hidden = false;
     button.disabled = availability === 'lost' || Boolean(pending);
-    button.textContent = pending ? 'Загрузка 3D-сцены…' : 'К 3D-визитке';
+    button.textContent = t(pending ? 'card.loadingButton' : 'card.return');
     notice.hidden = reason === 'printer' && availability === 'ready';
-    notice.textContent = pending ? 'Загружается интерактивная 3D-сцена.'
-      : reason === 'fallback' ? FALLBACK_NOTICE + (availability === 'ready' ? ' Сцена снова доступна.' : '')
-        : 'Текстовая визитка. Можно открыть интерактивную 3D-сцену.';
+    notice.textContent = pending ? t('card.loadingNotice')
+      : reason === 'fallback' ? t('card.fallback') + (availability === 'ready' ? t('card.available') : '')
+        : t('card.notice');
     document.documentElement.dataset.availability = availability;
   }
   function presentCard(nextReason, record = false) {
@@ -96,7 +95,7 @@ export function createCardMode({ window, document, loadRuntime, onModeChange = (
     theme();
     service();
     if (wasScene || focusedLoader) {
-      title.focus({ preventScroll: true });
+      document.querySelector('#card-title').focus({ preventScroll: true });
       window.scrollTo(0, scroll);
     }
   }
@@ -197,6 +196,7 @@ export function createCardMode({ window, document, loadRuntime, onModeChange = (
       else presentCard('direct');
     } else activateScene();
   }, { signal: events.signal });
+  const unsubscribeLocale = subscribeLocale(() => { theme(); service(); });
   service();
   return {
     get mode() { return mode; },
@@ -205,6 +205,6 @@ export function createCardMode({ window, document, loadRuntime, onModeChange = (
       if (new URL(window.location.href).searchParams.get('view') === 'card') presentCard('direct');
       else return activateScene();
     },
-    dispose() { destroyed = true; revision++; admission = undefined; events.abort(); loading.dispose(); runtime?.dispose(); },
+    dispose() { destroyed = true; revision++; admission = undefined; unsubscribeLocale(); events.abort(); loading.dispose(); runtime?.dispose(); },
   };
 }

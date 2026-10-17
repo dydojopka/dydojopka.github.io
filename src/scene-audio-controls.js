@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 export const DEFAULT_SCENE_VOLUME = 0.5;
 const VOLUME_KEY = 'workstation-volume';
 
@@ -20,11 +22,11 @@ export function saveSceneVolume(window, volume) {
 export function syncSceneVolumeControl(slider, control, volume, muteButton) {
   const percent = Math.round(volume * 100);
   slider.value = String(percent);
-  slider.setAttribute('aria-valuetext', percent ? `${percent}%` : 'Звук выключен');
+  slider.setAttribute('aria-valuetext', percent ? `${percent}%` : t('scene.soundOff'));
   control.dataset.muted = String(!percent);
   control.style.setProperty('--sound-level', `${percent}%`);
   if (muteButton) {
-    const label = percent ? 'Выключить звук' : 'Включить звук';
+    const label = percent ? t('scene.mute') : t('scene.unmute');
     muteButton.setAttribute('aria-label', label);
     muteButton.setAttribute('aria-pressed', String(!percent));
     muteButton.title = label;

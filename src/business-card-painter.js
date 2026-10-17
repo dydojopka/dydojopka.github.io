@@ -1,3 +1,4 @@
+import { getLocale, t } from './i18n.js';
 import { CanvasTexture, SRGBColorSpace } from 'three';
 import { businessCardPhotoUrl } from './business-card-html.js';
 import { layoutMarkdown, runFont } from './markdown-layout.js';
@@ -21,18 +22,18 @@ export async function loadBusinessCardImages(about, base = '/', createImage = ()
   return { portrait: images.get(photo), images };
 }
 
-export function businessCardPaperBlocks(about) {
+export function businessCardPaperBlocks(about, locale = getLocale()) {
   return [...about.blocks,
-    { type: 'heading', depth: 2, runs: [{ text: 'Контакты' }] },
+    { type: 'heading', depth: 2, runs: [{ text: t('scene.contacts', {}, locale) }] },
     ...about.contacts.map((contact) => ({ type: 'list', runs: [
       { text: '• ' }, { text: contact.label, href: contact.href }, { text: `: ${contact.value}` },
     ] })),
   ];
 }
 
-export function layoutBusinessCardPaper(context, about, { portrait, images = new Map() } = {}) {
+export function layoutBusinessCardPaper(context, about, { portrait, images = new Map(), locale = getLocale() } = {}) {
   const width = WIDTH - MARGIN * 2;
-  const blocks = businessCardPaperBlocks(about);
+  const blocks = businessCardPaperBlocks(about, locale);
   let result;
   // Fit the complete pre-project card, preserving text and image proportions.
   // The trailing part of the A4 sheet remains visible in the short output tray.

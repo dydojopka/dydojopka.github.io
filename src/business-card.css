@@ -9,11 +9,13 @@ html[data-mode='loading'] #card { display: none; }
 .card-service, .business-card { max-width: 80ch; margin: 0 auto; }
 .card-service { margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
 .card-service p { margin-top: 0; }
-.card-service button, #card-download { margin: 0 8px 8px 0; min-height: 44px; padding: 10px 16px; background: #18221d; border: 1px solid #46574d; border-radius: 3px; color: inherit; font: inherit; cursor: pointer; }
+.card-service button, #card-download, #card-language { margin: 0 8px 8px 0; min-height: 44px; padding: 10px 16px; background: #18221d; border: 1px solid #46574d; border-radius: 3px; color: inherit; font: inherit; cursor: pointer; }
 .card-service button:disabled { cursor: wait; opacity: 0.65; }
-#card-theme, #card-download { display: inline-flex; width: 44px; height: 44px; padding: 10px; align-items: center; justify-content: center; vertical-align: top; }
+#card-theme, #card-download, #card-language { display: inline-flex; width: 44px; height: 44px; padding: 10px; align-items: center; justify-content: center; vertical-align: top; }
+.language-switch { text-decoration: none; }
+#card-language { font-size: 12px; font-weight: 600; }
 #card-theme svg, #card-download svg { width: 22px; height: 22px; flex: none; }
-#card-download:hover { background: #24382c; }
+#card-download:hover, #card-language:hover { background: #24382c; }
 #card-theme .theme-moon, html[data-card-theme='paper'] #card-theme .theme-sun { display: none; }
 html[data-card-theme='paper'] #card-theme .theme-moon { display: block; }
 .business-card { color-scheme: dark; padding: clamp(20px, 5vw, 52px); background: var(--paper); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 3px 16px #0003; font-size: 17px; line-height: 1.55; overflow-wrap: anywhere; }

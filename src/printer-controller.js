@@ -152,6 +152,14 @@ export function createPrinterController({ printer, scene, camera, reducedMotion,
       }
       return texture;
     },
+    refreshTexture() {
+      if (!texture || disposed) return;
+      const previous = texture;
+      texture = prepareTexture();
+      ink.map = texture;
+      ink.needsUpdate = true;
+      previous.dispose();
+    },
     async warmup(render) {
       const prepared = this.prepare();
       const previous = sheet.material;

@@ -1,6 +1,6 @@
+import { subscribeLocale, t } from './i18n.js';
+
 const STAGES = ['modules', 'graphics', 'environment', 'card', 'shaders'];
-const STAGE_LABELS = ['Загрузка модулей интерфейса…', 'Подготовка графической системы…',
-  'Загрузка окружения и объектов…', 'Подготовка содержимого визитки…', 'Подготовка изображения…'];
 const NAVIGATION_KEYS = new Set(['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock']);
 const LINE_DELAY = 140;
 
@@ -34,9 +34,9 @@ export function createLoadingScreen({ window, document, onEnter, setTimer = setT
       row.querySelector('.boot-result').textContent = state === 'done' ? '[ OK ]' : state === 'active' ? '[ … ]' : '[ — ]';
     }
     button.disabled = button.hidden = !ready;
-    status.textContent = ready ? 'Система готова. Ожидание ввода.'
-      : prepared ? 'Вывод правового уведомления…' : STAGE_LABELS[current];
-    prompt.textContent = ready ? 'Нажмите любую клавишу или кнопку мыши, чтобы войти' : 'Ожидание готовности системы';
+    status.textContent = ready ? t('loading.ready')
+      : prepared ? t('loading.legalStatus') : t(`loading.stage.${STAGES[current]}`);
+    prompt.textContent = t(ready ? 'loading.enter' : 'loading.wait');
   }
   function cancel() {
     if (timer !== undefined) clearTimer(timer);
@@ -74,6 +74,7 @@ export function createLoadingScreen({ window, document, onEnter, setTimer = setT
     if (document.hidden) cancel(); else print();
   }, options);
   reducedMotion.addEventListener('change', () => { cancel(); print(); }, options);
+  const unsubscribeLocale = subscribeLocale(paint);
   paint();
   return {
     reset() {
@@ -89,6 +90,6 @@ export function createLoadingScreen({ window, document, onEnter, setTimer = setT
     },
     setReady(value) { prepared = value; paint(); print(); },
     setVisible(value) { visible = value; if (value) { paint(); print(); } else cancel(); },
-    dispose() { visible = false; cancel(); events.abort(); },
+    dispose() { visible = false; cancel(); unsubscribeLocale(); events.abort(); },
   };
 }

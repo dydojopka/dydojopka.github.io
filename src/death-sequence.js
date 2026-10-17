@@ -1,3 +1,5 @@
+import { subscribeLocale, t } from './i18n.js';
+
 const CODE = '676767';
 const BLUE_START = 6;
 const BLUE_CLEAR = 6.6;
@@ -11,18 +13,18 @@ export function createDeathSequence({
 }) {
   const overlay = document.createElement('dialog');
   overlay.className = 'death-overlay';
-  overlay.setAttribute('aria-label', 'Критическая ошибка системы. Страница будет перезагружена.');
+  overlay.setAttribute('aria-label', t('scene.deathLabel'));
   overlay.tabIndex = -1;
   overlay.innerHTML = `
-    <div class="death-warning" aria-hidden="true"><i></i><strong>SYSTEM FAILURE</strong><span>КРИТИЧЕСКИЙ СБОЙ</span></div>
+    <div class="death-warning" aria-hidden="true"><i></i><strong>SYSTEM FAILURE</strong><span>${t('scene.deathWarning')}</span></div>
     <div class="death-blue" hidden>
       <img class="death-blue-art" alt="" draggable="false">
       <div class="death-error-copy">
-        <h2>КРИТИЧЕСКАЯ ОШИБКА</h2>
-        <p>ФАТАЛЬНОЕ ИСКЛЮЧЕНИЕ ПО АДРЕСУ 0023:51206400360A<br>В МОДУЛЕ LSTR-SYS-000000FF.<br>ВОЗМОЖНА АППАРАТНАЯ НЕИСПРАВНОСТЬ.</p>
-        <p>ЕСЛИ ПРОБЛЕМА ПОВТОРЯЕТСЯ, ОБРАТИТЕСЬ<br>В СЛУЖБУ ТЕХНИЧЕСКОГО ОБСЛУЖИВАНИЯ РЕПЛИК.</p>
+        <h2>${t('scene.deathHeading')}</h2>
+        <p class="death-exception">${t('scene.deathException').replaceAll('\n', '<br>')}</p>
+        <p class="death-support">${t('scene.deathSupport').replaceAll('\n', '<br>')}</p>
         <p class="death-stop">***STOP: 0x001E97FF [LSTR-512]</p>
-        <p class="death-restart">ПЕРЕЗАГРУЗКА СИСТЕМЫ…</p>
+        <p class="death-restart">${t('scene.deathRestart')}</p>
       </div>
       <div class="death-shutters" aria-hidden="true"></div>
     </div>`;
@@ -74,6 +76,14 @@ export function createDeathSequence({
     paint();
     if (!frame) frame = requestFrame(tick);
   }
+  const unsubscribeLocale = subscribeLocale(() => {
+    overlay.setAttribute('aria-label', t('scene.deathLabel'));
+    overlay.querySelector('.death-warning span').textContent = t('scene.deathWarning');
+    overlay.querySelector('.death-error-copy h2').textContent = t('scene.deathHeading');
+    overlay.querySelector('.death-exception').innerHTML = t('scene.deathException').replaceAll('\n', '<br>');
+    overlay.querySelector('.death-support').innerHTML = t('scene.deathSupport').replaceAll('\n', '<br>');
+    overlay.querySelector('.death-restart').textContent = t('scene.deathRestart');
+  });
   return {
     get running() { return running; },
     resetInput() { buffer = ''; },
@@ -102,7 +112,7 @@ export function createDeathSequence({
     refresh() { if (running && active && !disposed) paint(); },
     dispose() {
       if (disposed) return;
-      disposed = true; active = false; buffer = '';
+      disposed = true; unsubscribeLocale(); active = false; buffer = '';
       cancelFrame(frame);
       overlay.remove();
     },

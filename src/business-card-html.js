@@ -1,4 +1,5 @@
 import { escapeHtml, inlineRuns, runsHtml } from './markdown.js';
+import { t } from './i18n.js';
 
 export function semanticMarkdownHtml(page, headingOffset = 0) {
   const images = new Map(page.blocks.flatMap((block) => block.runs)
@@ -35,17 +36,19 @@ export function businessCardPhotoUrl(about, base = '/') {
   return photo.startsWith('/') ? `${base}${photo.slice(1)}` : undefined;
 }
 
-export function businessCardHtml({ about, projects }, base = '/') {
+export function businessCardHtml({ about, projects, locale: contentLocale }, base = '/', locale = contentLocale ?? 'ru') {
   const photoUrl = businessCardPhotoUrl(about, base);
+  const contactsTitle = escapeHtml(t('card.contacts', {}, locale));
+  const projectsTitle = escapeHtml(t('card.projects', {}, locale));
   return `<article class="business-card" aria-labelledby="card-title">
     <header><h1 id="card-title" tabindex="-1">${escapeHtml(about.title)}</h1>
       ${photoUrl ? `<img class="card-portrait" src="${escapeHtml(photoUrl)}" alt="${escapeHtml(about.title)}" width="809" height="1078">` : ''}
     </header>
     ${semanticMarkdownHtml(about)}
-    <section aria-labelledby="card-contacts"><h2 id="card-contacts">Контакты</h2>
+    <section aria-labelledby="card-contacts"><h2 id="card-contacts">${contactsTitle}</h2>
       <ul>${about.contacts.map((contact) => `<li><a href="${escapeHtml(contact.href)}">${escapeHtml(contact.label)}</a>: ${escapeHtml(contact.value)}</li>`).join('')}</ul>
     </section>
-    <section aria-label="Проекты">${projects.map((page) => `<section aria-labelledby="project-${escapeHtml(page.id)}">
+    <section aria-label="${projectsTitle}">${projects.map((page) => `<section aria-labelledby="project-${escapeHtml(page.id)}">
       <h2 id="project-${escapeHtml(page.id)}">${escapeHtml(page.title)}</h2>${semanticMarkdownHtml(page, 1)}
     </section>`).join('\n')}</section>
   </article>`;

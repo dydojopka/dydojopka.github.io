@@ -1,14 +1,8 @@
+import { getLocale, subscribeLocale, t } from './i18n.js';
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, CanvasTexture, SRGBColorSpace } from 'three';
 
 export const PRINT_BUTTON = { left: 0.12, right: 0.88, top: 0.67, bottom: 0.92 };
-export const PRINTER_STATUS = {
-  idle: 'Распечатать визитку?',
-  feeding: 'Печать визитки…',
-  printing: 'Печать визитки…',
-  ejecting: 'Печать визитки…',
-  ready: 'Визитка готова. Нажмите на лист в лотке.',
-  error: 'Не удалось подготовить визитку',
-};
+export function printerStatus(state) { return t(`scene.printerStatus.${state}`); }
 
 export function createPrinterDisplay() {
   const display = new Group();
@@ -42,31 +36,31 @@ export function createPrinterDisplayPainter(screen, createCanvas = () => documen
   screen.material.map = texture;
   screen.material.needsUpdate = true;
   let previous;
+  let currentState = 'idle';
   function paint(state) {
+    currentState = state;
     const visualState = ['feeding', 'printing', 'ejecting'].includes(state) ? 'printing' : state;
-    if (previous === visualState) return;
-    previous = visualState;
+    const revision = `${getLocale()}:${visualState}`;
+    if (previous === revision) return;
+    previous = revision;
     context.fillStyle = '#030b07'; context.fillRect(0, 0, 720, 450);
     context.strokeStyle = '#245438'; context.lineWidth = 3; context.strokeRect(14, 14, 692, 422);
     context.textAlign = 'center'; context.textBaseline = 'middle';
     context.fillStyle = '#a3ffb7'; context.font = '80px Consolas, monospace';
-    const heading = visualState === 'idle' ? ['Распечатать', 'визитку?']
-      : visualState === 'ready' ? ['Визитка', 'готова']
-        : visualState === 'error' ? ['Ошибка', 'печати'] : ['Печать', 'визитки…'];
+    const heading = [1, 2].map((line) => t(`scene.printer.${visualState}.heading${line}`));
     heading.forEach((line, index) => context.fillText(line, 360, 78 + index * 82));
     context.fillStyle = '#73df92'; context.font = `${visualState === 'idle' ? 52 : 48}px Consolas, monospace`;
-    const caption = visualState === 'idle' ? ['Версия без 3D']
-      : visualState === 'ready' ? ['Нажмите на лист', 'в лотке']
-        : visualState === 'error' ? ['Повторите попытку'] : ['Подождите…'];
+    const caption = (visualState === 'ready' ? [1, 2] : [1]).map((line) => t(`scene.printer.${visualState}.caption${line}`));
     caption.forEach((line, index) => context.fillText(line, 360, (visualState === 'idle' || visualState === 'error' ? 252 : 270) + index * 56));
     if (state === 'idle' || state === 'error') {
       context.fillStyle = '#06110b'; context.fillRect(86, 302, 548, 112);
       context.strokeStyle = '#73df92'; context.strokeRect(86, 302, 548, 112);
       context.fillStyle = '#a3ffb7'; context.font = '64px Consolas, monospace';
-      context.fillText(state === 'error' ? 'Повторить' : 'Печатать', 360, 358);
+      context.fillText(t(state === 'error' ? 'scene.printer.retry' : 'scene.printer.print'), 360, 358);
     }
     texture.needsUpdate = true;
   }
+  const unsubscribeLocale = subscribeLocale(() => paint(currentState));
   paint('idle');
-  return { paint, dispose() { screen.material.map = null; texture.dispose(); } };
+  return { paint, dispose() { unsubscribeLocale(); screen.material.map = null; texture.dispose(); } };
 }
