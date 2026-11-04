@@ -50,6 +50,8 @@ export function radioFrontHit(radio, hit) {
 export function radioView(radio, aspect, fill = 0.90) {
   const panels = radioPanels(radio);
   const bounds = panels.reduce((result, panel) => result.union(panel.bounds), new Box3()).expandByScalar(0.035);
+  const clue = radio.parent?.getObjectByName('radio-window-clue');
+  if (clue) bounds.union(new Box3().setFromObject(clue).expandByScalar(0.035));
   const center = bounds.getCenter(new Vector3());
   const direction = panels.reduce((sum, panel) => sum.add(panel.normal), new Vector3()).normalize();
   direction.add(new Vector3(0, 0.10, 0)).normalize();

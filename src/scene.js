@@ -15,6 +15,7 @@ import { disposeScene } from './dispose-scene.js';
 import { preparePlant } from './plant-model.js';
 import { loadPaintingPhotos, preparePainting } from './painting-model.js';
 import { createRedDesert } from './red-desert.js';
+import { addDeskWindowClues } from './window-clues.js';
 
 // Authored meshes and atlases from the Unity scenes. The converter bakes
 // Unity transforms and clips the larger building to the workstation room.
@@ -86,6 +87,7 @@ export async function createRoom({ screenTexture }) {
   const dark = material(0x111b16);
   const paper = material(0xbec4ac, { map: null });
   const printer = buildPrinter(staticRoot.getObjectByName('card-reader'), { paper });
+  addDeskWindowClues(staticRoot);
   addContactShadows(staticRoot, ['monitor', 'keyboard', 'radio-stack', 'plant', 'desk-lamp', 'printer', 'book'], desktop + 0.001);
   const cube = new THREE.BoxGeometry(1, 1, 1);
   function box(size, position, mat, parent = staticRoot) {

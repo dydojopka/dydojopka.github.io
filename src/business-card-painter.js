@@ -2,6 +2,7 @@ import { getLocale, t } from './i18n.js';
 import { CanvasTexture, SRGBColorSpace } from 'three';
 import { businessCardPhotoUrl } from './business-card-html.js';
 import { layoutMarkdown, runFont } from './markdown-layout.js';
+import { windowClueLabel } from './window-clues.js';
 
 const WIDTH = 850;
 const HEIGHT = 1200;
@@ -79,6 +80,11 @@ export function createBusinessCardTexture(about, createCanvas = () => document.c
   if (assets.portrait) context.drawImage(assets.portrait, photo.x, photo.y, photo.width, photo.height);
   else { context.fillStyle = '#e4e5df'; context.fillRect(photo.x, photo.y, photo.width, photo.height); }
   draw(layout.body.items, layout.bodyY);
+  // Only the physical printer sheet carries this footer; HTML and PDF share no ink.
+  context.font = 'bold 36px monospace';
+  context.fillStyle = '#4a4b43';
+  const clue = windowClueLabel(1);
+  context.fillText(clue, WIDTH - 36 - context.measureText(clue).width, HEIGHT - 30);
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   return texture;

@@ -521,6 +521,8 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
         else if (hitBelongsTo(hit, lamp)) {
           // Keep the light count stable to reuse the prepared shaders and shadows.
           lampLight.intensity = lampLight.intensity ? 0 : lampIntensity;
+          scene.getObjectByName('lamp-window-clue').material.opacity = lampLight.intensity ? 0 : 0.85;
+          targetsDirty = true;
           lampAudio.play('click', lamp.getWorldPosition(new THREE.Vector3()));
           requestDraw();
         } else if (hitBelongsTo(hit, plant)) {
