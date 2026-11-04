@@ -1,7 +1,8 @@
 import {
-  BoxGeometry, DataTexture, FrontSide, Group, Matrix4, Mesh, MeshBasicMaterial,
+  BoxGeometry, DataTexture, FrontSide, Group, Matrix4, Mesh,
   MeshStandardMaterial, NearestFilter, PlaneGeometry, Quaternion, SRGBColorSpace, TextureLoader, Vector3,
 } from 'three';
+import { createScratchedClue } from './window-clues.js';
 
 function backingTexture() {
   const pixels = new Uint8Array(64 * 64 * 4);
@@ -104,11 +105,13 @@ export function preparePainting(shelf, photos) {
   const panel = new Mesh(new PlaneGeometry(size.x * 0.94, size.y * 0.9),
     new MeshStandardMaterial({ map: backingTexture(), roughness: 1 }));
   panel.name = 'painting-backing';
+  panel.receiveShadow = true;
   panel.position.z = bounds.min.z - 0.002; panel.rotation.y = Math.PI;
   root.add(panel);
   const tabMaterial = new MeshStandardMaterial({ color: 0x282723, metalness: 0.4, roughness: 0.8 });
   for (const x of [-1, 1]) for (const y of [-1, 1]) {
     const tab = new Mesh(new BoxGeometry(size.x * 0.025, size.y * 0.085, 0.002), tabMaterial);
+    tab.castShadow = tab.receiveShadow = true;
     tab.position.set(x * size.x * 0.456, y * size.y * 0.32, bounds.min.z - 0.004);
     root.add(tab);
   }
@@ -120,18 +123,29 @@ export function preparePainting(shelf, photos) {
   // Keep both materials reachable for shader warmup, context restoration and
   // disposeScene, including whichever photograph is currently hidden.
   const photo = new Mesh(new PlaneGeometry(photoWidth, photoHeight), photos.map((map) =>
-    new MeshBasicMaterial({ map, toneMapped: false })));
+    new MeshStandardMaterial({ map, roughness: 1 })));
   photo.name = 'painting-photo';
+  photo.receiveShadow = true;
   photo.geometry.clearGroups(); photo.geometry.addGroup(0, 6, 0);
   mount.add(photo);
   const tapeMaterial = new MeshStandardMaterial({ color: 0xafa17a, roughness: 1 });
   for (const sign of [-1, 1]) {
     const tape = new Mesh(new BoxGeometry(photoWidth * 0.34, photoHeight * 0.09, 0.002), tapeMaterial);
+    tape.castShadow = tape.receiveShadow = true;
     tape.position.set(sign * photoWidth * 0.22, sign * photoHeight * 0.48, 0.003);
     tape.rotation.z = -0.18;
     mount.add(tape);
   }
+  const clue = createScratchedClue(2, photoWidth * 0.9, photoHeight * 0.105, { color: '#24221e', weight: 3.2, lit: true });
+  clue.name = 'painting-window-clue';
+  clue.position.set(0, -photoHeight * 0.397, 0.001);
+  clue.rotation.z = -0.025;
+  clue.material.opacity = 0;
+  mount.add(clue);
   root.updateWorldMatrix(true, true);
   return { root, size, bounds, setArtwork,
-    setPhoto(ariane) { photo.geometry.groups[0].materialIndex = ariane ? 1 : 0; } };
+    setPhoto(ariane) {
+      photo.geometry.groups[0].materialIndex = ariane ? 1 : 0;
+      clue.material.opacity = ariane ? 0.85 : 0;
+    } };
 }
