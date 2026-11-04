@@ -1,4 +1,6 @@
-const PARTS = ['39486', '60170', '24326', '01064'];
+export const WINDOW_CODE_PARTS = Object.freeze(['39486', '60170', '24326', '01064']);
+
+const PARTS = WINDOW_CODE_PARTS;
 
 export function createWindowCode({ onPart = () => {}, onComplete = () => {} } = {}) {
   let part = 0;
