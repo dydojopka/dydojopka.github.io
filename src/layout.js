@@ -51,8 +51,8 @@ export function cameraView(aspect, desk, focus, normal) {
   };
 }
 
-export function renderSize(width, height, monitorFocused = false) {
-  const scale = Math.min(1, (monitorFocused ? 1440 : 600) / Math.max(height, 1), (monitorFocused ? 1920 : 1600) / Math.max(width, 1));
+export function renderSize(width, height, detailed = false) {
+  const scale = Math.min(1, (detailed ? 1440 : 600) / Math.max(height, 1), (detailed ? 1920 : 1600) / Math.max(width, 1));
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 

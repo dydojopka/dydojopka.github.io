@@ -291,6 +291,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       painting, scene, camera, reducedMotion,
       onChange(state) {
         host.dataset.paintingState = state;
+        targetsDirty = true;
         renderer.shadowMap.needsUpdate = true;
         syncInput(); requestDraw();
         if (state === 'shelf' && visible && !disposed && !contextLost) host.focus({ preventScroll: true });
@@ -576,7 +577,9 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       if (plantController?.reveal(camera, target, focus.state)) renderer.shadowMap.needsUpdate = true;
       syncAudioPose();
       if (targetsDirty) {
-        const size = renderSize(viewport.width, viewport.height, target === 'monitor' && focus.state !== 'room');
+        // Small pencil strokes need the same pixel budget as the monitor text.
+        const detailed = (target === 'monitor' && focus.state !== 'room') || paintingController.active || !lampLight.intensity;
+        const size = renderSize(viewport.width, viewport.height, detailed);
         postProcessing.resize(size.width, size.height);
         targetsDirty = false;
       }
