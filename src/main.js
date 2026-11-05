@@ -291,7 +291,6 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       painting, scene, camera, reducedMotion,
       onChange(state) {
         host.dataset.paintingState = state;
-        targetsDirty = true;
         renderer.shadowMap.needsUpdate = true;
         syncInput(); requestDraw();
         if (state === 'shelf' && visible && !disposed && !contextLost) host.focus({ preventScroll: true });
@@ -523,7 +522,6 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
           // Keep the light count stable to reuse the prepared shaders and shadows.
           lampLight.intensity = lampLight.intensity ? 0 : lampIntensity;
           scene.getObjectByName('lamp-window-clue').material.opacity = lampLight.intensity ? 0 : 0.85;
-          targetsDirty = true;
           lampAudio.play('click', lamp.getWorldPosition(new THREE.Vector3()));
           requestDraw();
         } else if (hitBelongsTo(hit, plant)) {
@@ -577,9 +575,7 @@ export async function createSceneRuntime({ onCard, onLost, onReady, onFailure, o
       if (plantController?.reveal(camera, target, focus.state)) renderer.shadowMap.needsUpdate = true;
       syncAudioPose();
       if (targetsDirty) {
-        // Small pencil strokes need the same pixel budget as the monitor text.
-        const detailed = (target === 'monitor' && focus.state !== 'room') || paintingController.active || !lampLight.intensity;
-        const size = renderSize(viewport.width, viewport.height, detailed);
+        const size = renderSize(viewport.width, viewport.height, target === 'monitor' && focus.state !== 'room');
         postProcessing.resize(size.width, size.height);
         targetsDirty = false;
       }
